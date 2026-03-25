@@ -1,8 +1,9 @@
 """Tests for Fast Walsh-Hadamard Transform and randomized rotation."""
 
-import torch
 import pytest
-from turboquant.hadamard import fwht, RandomizedHadamardTransform
+import torch
+
+from turboquant.hadamard import RandomizedHadamardTransform, fwht
 
 
 class TestFWHT:
@@ -22,9 +23,7 @@ class TestFWHT:
         """FWHT (with normalization) preserves L2 norm."""
         x = torch.randn(256)
         y = fwht(x)
-        torch.testing.assert_close(
-            torch.norm(y), torch.norm(x), atol=1e-4, rtol=1e-4
-        )
+        torch.testing.assert_close(torch.norm(y), torch.norm(x), atol=1e-4, rtol=1e-4)
 
     def test_output_shape(self):
         """Output shape matches input shape."""

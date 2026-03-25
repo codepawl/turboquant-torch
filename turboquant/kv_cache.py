@@ -7,7 +7,7 @@ for reconstruction quality).
 Reference: Section 4 of TurboQuant (arXiv:2504.19874)
 """
 
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple
 
 import torch
 import torch.nn.functional as F
@@ -17,6 +17,7 @@ from .core import TurboQuant, TurboQuantOutput
 
 class CompressedKV(NamedTuple):
     """Compressed key-value cache."""
+
     keys: TurboQuantOutput
     values: TurboQuantOutput
     batch_size: int
@@ -49,9 +50,7 @@ class TurboQuantKVCache:
         self.value_quantizer = self.value_quantizer.to(device)
         return self
 
-    def compress(
-        self, keys: torch.Tensor, values: torch.Tensor
-    ) -> CompressedKV:
+    def compress(self, keys: torch.Tensor, values: torch.Tensor) -> CompressedKV:
         """Compress key and value tensors.
 
         Args:
@@ -62,7 +61,7 @@ class TurboQuantKVCache:
             CompressedKV with quantized keys and values.
         """
         B, H, S, D = keys.shape
-        assert D == self.head_dim
+        assert self.head_dim == D
 
         # Flatten to (B*H*S, D) for quantization
         k_flat = keys.reshape(-1, D)
@@ -91,8 +90,10 @@ class TurboQuantKVCache:
         """
         k_flat = self.key_quantizer.dequantize(compressed.keys)
         return k_flat.view(
-            compressed.batch_size, compressed.num_heads,
-            compressed.seq_len, compressed.head_dim,
+            compressed.batch_size,
+            compressed.num_heads,
+            compressed.seq_len,
+            compressed.head_dim,
         )
 
     def decompress_values(self, compressed: CompressedKV) -> torch.Tensor:
@@ -106,15 +107,17 @@ class TurboQuantKVCache:
         """
         v_flat = self.value_quantizer.dequantize(compressed.values)
         return v_flat.view(
-            compressed.batch_size, compressed.num_heads,
-            compressed.seq_len, compressed.head_dim,
+            compressed.batch_size,
+            compressed.num_heads,
+            compressed.seq_len,
+            compressed.head_dim,
         )
 
     def attention(
         self,
         query: torch.Tensor,
         compressed: CompressedKV,
-        scale: Optional[float] = None,
+        scale: float | None = None,
     ) -> torch.Tensor:
         """Compute scaled dot-product attention with compressed KV cache.
 
@@ -127,7 +130,7 @@ class TurboQuantKVCache:
             Attention output of shape (batch, heads, q_len, head_dim).
         """
         if scale is None:
-            scale = self.head_dim ** -0.5
+            scale = self.head_dim**-0.5
 
         keys = self.decompress_keys(compressed)
         values = self.decompress_values(compressed)
@@ -141,7 +144,7 @@ class TurboQuantKVCache:
 
     def memory_savings(
         self, batch_size: int, num_heads: int, seq_len: int
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         """Report memory usage comparison.
 
         Args:
@@ -154,10 +157,9 @@ class TurboQuantKVCache:
         """
         n_vectors = batch_size * num_heads * seq_len
         original_bytes = n_vectors * self.head_dim * 4 * 2  # K + V, float32
-        compressed_bytes = (
-            self.key_quantizer.memory_bytes(n_vectors)
-            + self.value_quantizer.memory_bytes(n_vectors)
-        )
+        compressed_bytes = self.key_quantizer.memory_bytes(
+            n_vectors
+        ) + self.value_quantizer.memory_bytes(n_vectors)
         original_mb = original_bytes / (1024 * 1024)
         compressed_mb = compressed_bytes / (1024 * 1024)
         ratio = original_bytes / max(compressed_bytes, 1)

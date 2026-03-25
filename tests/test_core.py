@@ -1,7 +1,8 @@
 """Tests for TurboQuant full pipeline."""
 
-import torch
 import pytest
+import torch
+
 from turboquant.core import TurboQuant
 
 
@@ -38,7 +39,7 @@ class TestTurboQuant:
         out = tq.quantize(x)
         x_hat = tq.dequantize(out)
         mse = ((x - x_hat) ** 2).sum(dim=-1)
-        energy = (x ** 2).sum(dim=-1)
+        energy = (x**2).sum(dim=-1)
         rel_mse = (mse / energy).mean().item()
         assert rel_mse < 0.5
 

@@ -1,6 +1,7 @@
 """KV cache compression demo with memory savings report."""
 
 import torch
+
 from turboquant import TurboQuantKVCache
 
 # Typical transformer config

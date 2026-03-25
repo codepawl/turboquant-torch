@@ -12,10 +12,10 @@ since our codebook values may not be exactly optimal.
 Reference: Table 1 of TurboQuant (arXiv:2504.19874)
 """
 
-import torch
 import pytest
-from turboquant.mse_quantizer import TurboQuantMSE
+import torch
 
+from turboquant.mse_quantizer import TurboQuantMSE
 
 # Paper Table 1 values (MSE distortion for unit vectors)
 PAPER_DISTORTION = {
@@ -44,7 +44,7 @@ class TestDistortionBounds:
         # Should be within 5x of paper value
         assert distortion < paper_val * 5, (
             f"{bits}-bit: empirical={distortion:.4f}, paper={paper_val}, "
-            f"ratio={distortion/paper_val:.1f}x"
+            f"ratio={distortion / paper_val:.1f}x"
         )
         # Should not be zero
         assert distortion > paper_val * 0.01
@@ -65,5 +65,32 @@ class TestDistortionBounds:
         for i in range(len(distortions) - 1):
             assert distortions[i] > distortions[i + 1], (
                 f"Distortion not monotonically decreasing: "
-                f"{distortions[i]:.4f} <= {distortions[i+1]:.4f}"
+                f"{distortions[i]:.4f} <= {distortions[i + 1]:.4f}"
+            )
+
+    def test_inner_product_distortion(self):
+        """Full TurboQuant inner product distortion should decrease with more bits."""
+        from turboquant.core import TurboQuant
+
+        dim = 128
+        torch.manual_seed(0)
+        x = torch.randn(20, dim)
+        y = torch.randn(20, dim)
+
+        # True inner products (pairwise)
+        true_ips = (x * y).sum(dim=-1)
+
+        distortions = []
+        for bits in [2, 3, 4]:
+            tq = TurboQuant(dim=dim, bit_width=bits, unbiased=True, seed=42)
+            out = tq.quantize(x)
+            x_hat = tq.dequantize(out)
+            est_ips = (x_hat * y).sum(dim=-1)
+            distortion = ((true_ips - est_ips) ** 2).mean().item()
+            distortions.append(distortion)
+
+        # More bits should give lower distortion
+        for i in range(len(distortions) - 1):
+            assert distortions[i] > distortions[i + 1] * 0.5, (
+                f"Distortion not decreasing: {distortions}"
             )

@@ -8,7 +8,6 @@ Reference: Section 3.1 of TurboQuant (arXiv:2504.19874)
 """
 
 import math
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -53,6 +52,8 @@ def fwht(x: torch.Tensor, normalize: bool = True) -> torch.Tensor:
 
 
 class RandomizedHadamardTransform(nn.Module):
+    signs: torch.Tensor
+
     """Randomized Hadamard Transform: random sign flips followed by FWHT.
 
     After applying RHT to a unit vector of dimension d, each coordinate
@@ -86,8 +87,10 @@ class RandomizedHadamardTransform(nn.Module):
         """
         if x.shape[-1] < self.padded_dim:
             padding = torch.zeros(
-                *x.shape[:-1], self.padded_dim - x.shape[-1],
-                device=x.device, dtype=x.dtype,
+                *x.shape[:-1],
+                self.padded_dim - x.shape[-1],
+                device=x.device,
+                dtype=x.dtype,
             )
             x = torch.cat([x, padding], dim=-1)
 

@@ -1,6 +1,7 @@
 """Approximate nearest neighbor search demo on synthetic data."""
 
 import torch
+
 from turboquant import TurboQuantIndex
 
 # Parameters
@@ -42,5 +43,7 @@ print(f"Recall@{k}: {recall:.3f}")
 # Compression stats
 original_bytes = n_db * dim * 4
 compressed_bytes = index.memory_bytes()
-print(f"Memory: {original_bytes / 1024:.1f} KB -> {compressed_bytes / 1024:.1f} KB "
-      f"({original_bytes / compressed_bytes:.1f}x)")
+print(
+    f"Memory: {original_bytes / 1024:.1f} KB -> {compressed_bytes / 1024:.1f} KB "
+    f"({original_bytes / compressed_bytes:.1f}x)"
+)

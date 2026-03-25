@@ -1,7 +1,8 @@
 """Tests for MSE-optimal quantizer."""
 
-import torch
 import pytest
+import torch
+
 from turboquant.mse_quantizer import TurboQuantMSE
 
 
@@ -19,10 +20,8 @@ class TestTurboQuantMSE:
         mse = TurboQuantMSE(dim=64, bits=3)
         x = torch.randn(5, 64)
         out = mse.quantize(x)
-        x_hat = mse.dequantize(out)
         # Reconstructed norms should be similar (not exact due to quantization)
         orig_norms = torch.norm(x, dim=-1)
-        rec_norms = torch.norm(x_hat, dim=-1)
         # The norms are stored exactly, but reconstruction changes direction
         assert out.norms.shape == orig_norms.shape
         torch.testing.assert_close(out.norms, orig_norms, atol=1e-5, rtol=1e-5)

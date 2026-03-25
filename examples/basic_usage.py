@@ -1,6 +1,7 @@
 """Basic TurboQuant usage: quantize and dequantize vectors."""
 
 import torch
+
 from turboquant import TurboQuant
 
 # Create quantizer: 128-dim vectors, 3 bits per coordinate
@@ -21,7 +22,7 @@ print(f"Reconstructed shape: {x_hat.shape}")
 
 # Measure distortion
 mse = ((x - x_hat) ** 2).sum(dim=-1).mean()
-rel_mse = ((x - x_hat) ** 2).sum(dim=-1) / (x ** 2).sum(dim=-1)
+rel_mse = ((x - x_hat) ** 2).sum(dim=-1) / (x**2).sum(dim=-1)
 print(f"Mean MSE: {mse:.4f}")
 print(f"Mean relative MSE: {rel_mse.mean():.4f}")
 print(f"Compression ratio: {tq.compression_ratio():.1f}x")

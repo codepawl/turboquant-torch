@@ -5,10 +5,10 @@ TurboQuant and performs brute-force search over the compressed
 representations. Key advantage: zero indexing time (no training
 or calibration needed).
 
-Reference: Section 5 of TurboQuant (arXiv:2504.19874)
+Reference: Section 4.4 of TurboQuant (arXiv:2504.19874)
 """
 
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 import torch
 
@@ -36,7 +36,7 @@ class TurboQuantIndex:
         self.bit_width = bit_width
         self.metric = metric
         self.quantizer = TurboQuant(dim, bit_width, unbiased=True, seed=seed)
-        self._db: Optional[TurboQuantOutput] = None
+        self._db: TurboQuantOutput | None = None
         self._n_vectors: int = 0
 
     def to(self, device: torch.device) -> "TurboQuantIndex":
@@ -59,9 +59,7 @@ class TurboQuantIndex:
         self._db = self.quantizer.quantize(vectors)
         self._n_vectors = vectors.shape[0]
 
-    def search(
-        self, query: torch.Tensor, k: int = 10
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def search(self, query: torch.Tensor, k: int = 10) -> tuple[torch.Tensor, torch.Tensor]:
         """Search for k nearest neighbors.
 
         Args:

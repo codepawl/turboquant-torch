@@ -1,11 +1,22 @@
 # turboquant-torch
 
+[![CI](https://github.com/nxank4/turboquant-torch/actions/workflows/ci.yml/badge.svg)](https://github.com/nxank4/turboquant-torch/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
+[![Python](https://img.shields.io/pypi/pyversions/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
 Unofficial PyTorch reference implementation of **TurboQuant** from Google Research (ICLR 2026).
 
 **Paper:** [TurboQuant: Redefining AI Efficiency with Extreme Compression](https://arxiv.org/abs/2504.19874)
 **Blog:** [Google Research Blog](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
 
 TurboQuant is a **two-stage online (data-oblivious) vector quantizer** that achieves near information-theoretic optimal distortion. No training data needed — just plug in and compress.
+
+## Overview
+
+![TurboQuant Two-Stage Pipeline](assets/card-c-pipeline.png)
 
 ## How It Works
 
@@ -25,7 +36,7 @@ flowchart TD
     Deq --> Res["Residual r = x − x̂"]
 
     subgraph S2["Stage 2: QJL 1-bit on Residual"]
-        Res --> Proj["Random Rademacher Projection"]
+        Res --> Proj["Random Gaussian Projection"]
         Proj --> Sign["sign()"]
         Sign --> Bits["sign bits (1 bit/coord)"]
     end
@@ -45,7 +56,7 @@ flowchart TD
 
 ```bash
 # From source
-git clone https://github.com/your-username/turboquant-torch.git
+git clone https://github.com/nxank4/turboquant-torch.git
 cd turboquant-torch
 pip install -e ".[dev]"
 ```
@@ -117,6 +128,12 @@ From paper Table 1 (MSE distortion on unit vectors):
 
 3-bit achieves zero quality loss on LongBench, Needle-in-Haystack, ZeroSCROLLS, RULER, and L-Eval benchmarks.
 
+![MSE Distortion Validation](assets/card-a-distortion.png)
+
+### KV Cache Memory Savings
+
+![KV Cache Memory Savings](assets/card-b-memory.png)
+
 ## Project Structure
 
 ```
@@ -155,7 +172,7 @@ pytest tests/ -v
 ```bibtex
 @inproceedings{turboquant2026,
   title={TurboQuant: Redefining AI Efficiency with Extreme Compression},
-  author={Google Research},
+  author={Zandieh, Amir and Daliri, Majid and Hadian, Majid and Mirrokni, Vahab},
   booktitle={International Conference on Learning Representations (ICLR)},
   year={2026},
   url={https://arxiv.org/abs/2504.19874}
@@ -164,8 +181,8 @@ pytest tests/ -v
 
 ## Related Work
 
-- [QJL: 1-Bit Quantized JL Transform](https://arxiv.org/abs/2406.03482) — the 1-bit quantizer used in Stage 2
-- [PolarQuant](https://arxiv.org/abs/2502.17575) — related polar coordinate quantization approach
+- [QJL: 1-Bit Quantized JL Transform](https://arxiv.org/abs/2406.03482) — the 1-bit quantizer used in Stage 2. The official QJL implementation by the paper authors is available at [github.com/amirzandieh/QJL](https://github.com/amirzandieh/QJL).
+- [PolarQuant](https://arxiv.org/abs/2502.02617) — related polar coordinate quantization approach
 
 ## License
 

@@ -8,7 +8,7 @@ Total bit budget: b bits per coordinate = (b-1) MSE bits + 1 QJL bit.
 Reference: TurboQuant (arXiv:2504.19874)
 """
 
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import torch
 
@@ -18,11 +18,12 @@ from .qjl import QJL, QJLOutput
 
 class TurboQuantOutput(NamedTuple):
     """Output of TurboQuant quantization."""
-    mse_codes: torch.Tensor     # MSE quantizer codes, shape (..., padded_dim)
-    mse_norms: torch.Tensor     # L2 norms, shape (...)
-    qjl_output: Optional[QJLOutput]  # QJL sign bits + residual norms, or None
-    bit_width: int              # Total bits per coordinate
-    dim: int                    # Original input dimension
+
+    mse_codes: torch.Tensor  # MSE quantizer codes, shape (..., padded_dim)
+    mse_norms: torch.Tensor  # L2 norms, shape (...)
+    qjl_output: QJLOutput | None  # QJL sign bits + residual norms, or None
+    bit_width: int  # Total bits per coordinate
+    dim: int  # Original input dimension
 
 
 class TurboQuant:
@@ -59,7 +60,7 @@ class TurboQuant:
             mse_bits = bit_width
 
         self.mse = TurboQuantMSE(dim, bits=mse_bits, seed=seed)
-        self.qjl: Optional[QJL] = None
+        self.qjl: QJL | None = None
         if unbiased:
             self.qjl = QJL(dim, proj_dim=dim, seed=seed + 1)
 
@@ -117,9 +118,7 @@ class TurboQuant:
 
         return x_hat
 
-    def compute_inner_product(
-        self, query: torch.Tensor, output: TurboQuantOutput
-    ) -> torch.Tensor:
+    def compute_inner_product(self, query: torch.Tensor, output: TurboQuantOutput) -> torch.Tensor:
         """Compute inner products between query and quantized vectors.
 
         Uses asymmetric estimation: full-precision query with quantized keys.
@@ -141,18 +140,12 @@ class TurboQuant:
         x_hat = self.mse.dequantize(mse_out)
 
         # MSE component: query @ x_hat^T
-        if query.dim() == 1:
-            ip = x_hat @ query
-        else:
-            ip = query @ x_hat.t()
+        ip = x_hat @ query if query.dim() == 1 else query @ x_hat.t()
 
         # QJL correction
         if self.qjl is not None and output.qjl_output is not None:
             qjl_ip = self.qjl.estimate_inner_product(query, output.qjl_output)
-            if query.dim() == 1:
-                ip = ip + qjl_ip.squeeze(0)
-            else:
-                ip = ip + qjl_ip
+            ip = ip + qjl_ip.squeeze(0) if query.dim() == 1 else ip + qjl_ip
 
         return ip
 

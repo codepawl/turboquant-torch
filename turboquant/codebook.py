@@ -11,7 +11,7 @@ computed using scipy.
 Reference: Section 3.1, Lemma 3.2 of TurboQuant (arXiv:2504.19874)
 """
 
-from typing import Dict, NamedTuple, Tuple
+from typing import NamedTuple
 
 import numpy as np
 import torch
@@ -22,8 +22,9 @@ from scipy.stats import norm
 
 class Codebook(NamedTuple):
     """Quantizer codebook with decision boundaries and reconstruction centroids."""
+
     boundaries: np.ndarray  # shape (2^b - 1,)
-    centroids: np.ndarray   # shape (2^b,)
+    centroids: np.ndarray  # shape (2^b,)
 
 
 def _lloyd_max_normal(bits: int, max_iter: int = 200, tol: float = 1e-12) -> Codebook:
@@ -55,7 +56,9 @@ def _lloyd_max_normal(bits: int, max_iter: int = 200, tol: float = 1e-12) -> Cod
             # E[X | lo < X < hi] for X ~ N(0,1)
             prob = norm.cdf(hi) - norm.cdf(lo)
             if prob < 1e-15:
-                new_centroids[i] = (lo + hi) / 2 if np.isfinite(lo) and np.isfinite(hi) else centroids[i]
+                new_centroids[i] = (
+                    (lo + hi) / 2 if np.isfinite(lo) and np.isfinite(hi) else centroids[i]
+                )
             else:
                 # E[X | lo < X < hi] = (phi(lo) - phi(hi)) / (Phi(hi) - Phi(lo))
                 new_centroids[i] = (norm.pdf(lo) - norm.pdf(hi)) / prob
@@ -111,7 +114,7 @@ def _lloyd_max_beta(bits: int, dim: int, max_iter: int = 200, tol: float = 1e-12
                 # E[X | lo < X < hi] where X = 2*B - 1, B ~ Beta(a, a)
                 # = 2 * E[B | lo_01 < B < hi_01] - 1
                 def integrand(b: float) -> float:
-                    return b * rv.pdf(b)
+                    return float(b * rv.pdf(b))
 
                 e_b, _ = integrate.quad(integrand, lo_01, hi_01)
                 new_centroids[i] = 2 * (e_b / prob) - 1
@@ -126,13 +129,13 @@ def _lloyd_max_beta(bits: int, dim: int, max_iter: int = 200, tol: float = 1e-12
 
 
 # Precompute N(0,1) codebooks for bit widths 1-4
-_NORMAL_CODEBOOKS: Dict[int, Codebook] = {}
+_NORMAL_CODEBOOKS: dict[int, Codebook] = {}
 for _b in range(1, 5):
     _NORMAL_CODEBOOKS[_b] = _lloyd_max_normal(_b)
 
 
 # Cache for Beta codebooks (keyed by (bits, dim))
-_BETA_CODEBOOK_CACHE: Dict[Tuple[int, int], Codebook] = {}
+_BETA_CODEBOOK_CACHE: dict[tuple[int, int], Codebook] = {}
 
 
 def get_codebook(bits: int, dim: int) -> Codebook:
@@ -161,11 +164,10 @@ def get_codebook(bits: int, dim: int) -> Codebook:
             boundaries=cb.boundaries * scale,
             centroids=cb.centroids * scale,
         )
-    else:
-        key = (bits, dim)
-        if key not in _BETA_CODEBOOK_CACHE:
-            _BETA_CODEBOOK_CACHE[key] = _lloyd_max_beta(bits, dim)
-        return _BETA_CODEBOOK_CACHE[key]
+    key = (bits, dim)
+    if key not in _BETA_CODEBOOK_CACHE:
+        _BETA_CODEBOOK_CACHE[key] = _lloyd_max_beta(bits, dim)
+    return _BETA_CODEBOOK_CACHE[key]
 
 
 class LloydMaxCodebook:
@@ -209,8 +211,7 @@ class LloydMaxCodebook:
         # searchsorted expects sorted boundaries; returns index i such that
         # boundaries[i-1] <= x < boundaries[i]
         boundaries = self._boundaries.to(x.device)
-        codes = torch.searchsorted(boundaries, x)
-        return codes
+        return torch.searchsorted(boundaries, x)
 
     def dequantize(self, codes: torch.Tensor) -> torch.Tensor:
         """Map codes back to centroid values.

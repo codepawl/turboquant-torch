@@ -20,9 +20,10 @@ from .hadamard import RandomizedHadamardTransform
 
 class MSEQuantizedOutput(NamedTuple):
     """Output of MSE quantization."""
-    codes: torch.Tensor       # Integer codes, shape (..., padded_dim)
-    norms: torch.Tensor       # L2 norms, shape (...)
-    bit_width: int            # Bits per coordinate
+
+    codes: torch.Tensor  # Integer codes, shape (..., padded_dim)
+    norms: torch.Tensor  # L2 norms, shape (...)
+    bit_width: int  # Bits per coordinate
 
 
 class TurboQuantMSE:
@@ -111,4 +112,4 @@ class TurboQuantMSE:
             Distortion values of shape (...).
         """
         residual = self.get_residual(x)
-        return (residual ** 2).sum(dim=-1)
+        return (residual**2).sum(dim=-1)

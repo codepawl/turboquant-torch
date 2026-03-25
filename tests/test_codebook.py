@@ -1,7 +1,8 @@
 """Tests for Lloyd-Max codebook computation and scalar quantization."""
 
-import torch
 import pytest
+import torch
+
 from turboquant.codebook import LloydMaxCodebook, get_codebook
 
 
@@ -49,7 +50,7 @@ class TestLloydMaxCodebook:
     def test_code_range(self, bits):
         """Codes are in range [0, 2^b)."""
         lm = LloydMaxCodebook(bits, dim=128)
-        x = torch.randn(100, 128) / (128 ** 0.5)
+        x = torch.randn(100, 128) / (128**0.5)
         codes = lm.quantize(x)
         assert codes.min() >= 0
         assert codes.max() < 2**bits
@@ -57,7 +58,7 @@ class TestLloydMaxCodebook:
     def test_roundtrip_shape(self):
         """Quantize/dequantize preserves shape."""
         lm = LloydMaxCodebook(3, dim=128)
-        x = torch.randn(10, 128) / (128 ** 0.5)
+        x = torch.randn(10, 128) / (128**0.5)
         codes = lm.quantize(x)
         x_hat = lm.dequantize(codes)
         assert x_hat.shape == x.shape
@@ -65,7 +66,7 @@ class TestLloydMaxCodebook:
     def test_dequantize_values_are_centroids(self):
         """Dequantized values are centroid values."""
         lm = LloydMaxCodebook(2, dim=128)
-        x = torch.randn(5, 128) / (128 ** 0.5)
+        x = torch.randn(5, 128) / (128**0.5)
         codes = lm.quantize(x)
         x_hat = lm.dequantize(codes)
         centroids_set = set(lm.centroids.tolist())
@@ -78,6 +79,5 @@ class TestLloydMaxCodebook:
         cb_high = get_codebook(2, dim=128)
         # They should differ (different distributions)
         assert not all(
-            abs(a - b) < 1e-6
-            for a, b in zip(cb_low.centroids, cb_high.centroids)
+            abs(a - b) < 1e-6 for a, b in zip(cb_low.centroids, cb_high.centroids, strict=True)
         )

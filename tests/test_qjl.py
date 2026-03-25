@@ -1,8 +1,8 @@
 """Tests for Quantized Johnson-Lindenstrauss transform."""
 
 import torch
-import pytest
-from turboquant.qjl import QJL, QJLOutput, pack_bits, unpack_bits
+
+from turboquant.qjl import QJL, pack_bits, unpack_bits
 
 
 class TestPackBits:
@@ -101,3 +101,29 @@ class TestQJL:
         out = qjl.quantize(db)
         ip = qjl.estimate_inner_product(query, out)
         assert ip.shape == (5, 20)
+
+    def test_unbiasedness_with_gaussian_projection(self):
+        """QJL with Gaussian projection should be approximately unbiased."""
+        dim = 128
+        n_trials = 200
+
+        x = torch.randn(dim)
+        x = x / torch.norm(x)
+        y = torch.randn(dim)
+
+        true_ip = torch.dot(x, y).item()
+
+        estimates = []
+        for seed in range(n_trials):
+            qjl = QJL(input_dim=dim, proj_dim=dim, seed=seed)
+            out = qjl.quantize(x.unsqueeze(0))
+            v = qjl.dequantize_for_dot(out).squeeze(0)
+            est = torch.dot(y, v).item()
+            estimates.append(est)
+
+        mean_est = sum(estimates) / len(estimates)
+        # Bias should be small (< 15% of true value or < 0.15 absolute)
+        bias = abs(mean_est - true_ip)
+        assert bias < max(0.15, abs(true_ip) * 0.15), (
+            f"QJL biased: true={true_ip:.3f}, mean_est={mean_est:.3f}, bias={bias:.3f}"
+        )
