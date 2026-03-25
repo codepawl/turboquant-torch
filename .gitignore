@@ -1,20 +1,48 @@
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.so
+
+# Packaging
 *.egg-info/
+*.egg
 dist/
 build/
 .eggs/
-*.egg
-.pytest_cache/
-.tox/
+
+# Virtual environments
 .venv/
 venv/
 env/
-*.so
-.mypy_cache/
+
+# Testing / coverage
+.pytest_cache/
+.tox/
 .coverage
 coverage.xml
 htmlcov/
+
+# Type checking
+.mypy_cache/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific
 turboquant-torch-prompt.md
 uv.lock
+
+# Benchmark generated data (reproducible via run_benchmarks.py)
+benchmarks/results.json
+
+# HuggingFace model cache
+models--*/
