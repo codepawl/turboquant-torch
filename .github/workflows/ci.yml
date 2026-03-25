@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -48,7 +48,7 @@ jobs:
       - name: Run tests with coverage
         run: pytest tests/ -v --cov=turboquant --cov-report=xml --cov-report=term-missing
       - name: Upload coverage
-        if: matrix.python-version == '3.13'
+        if: matrix.python-version == '3.14'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
