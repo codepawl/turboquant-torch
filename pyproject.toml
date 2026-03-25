@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68.0,<83", "wheel"]
+requires = ["setuptools>=68.0,<83", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "turboquant-torch"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Unofficial PyTorch reference implementation of TurboQuant (ICLR 2026)"
 readme = "README.md"
 license = {text = "MIT"}
@@ -22,6 +22,10 @@ dev = [
     "ruff>=0.9",
     "mypy>=1.14",
 ]
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
 
 [tool.setuptools.packages.find]
 include = ["turboquant*"]
