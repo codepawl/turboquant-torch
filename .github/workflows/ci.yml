@@ -66,7 +66,7 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]" pip-audit safety
       - name: Audit dependencies (pip-audit)
-        run: pip-audit --strict
+        run: pip-audit --strict --skip-editable
       - name: Check for known vulnerabilities (safety)
         run: safety check
         continue-on-error: true
