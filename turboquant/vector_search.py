@@ -52,7 +52,8 @@ class TurboQuantIndex:
         Args:
             vectors: Database vectors of shape (n, dim).
         """
-        assert vectors.dim() == 2 and vectors.shape[1] == self.dim
+        if vectors.dim() != 2 or vectors.shape[1] != self.dim:
+            raise ValueError(f"Expected 2D tensor with dim {self.dim}, got shape {vectors.shape}")
         if self.metric == "cosine":
             norms = torch.norm(vectors, dim=-1, keepdim=True).clamp(min=1e-10)
             vectors = vectors / norms

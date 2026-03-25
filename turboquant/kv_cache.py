@@ -61,7 +61,8 @@ class TurboQuantKVCache:
             CompressedKV with quantized keys and values.
         """
         B, H, S, D = keys.shape
-        assert self.head_dim == D
+        if self.head_dim != D:
+            raise ValueError(f"Expected head_dim {self.head_dim}, got {D}")
 
         # Flatten to (B*H*S, D) for quantization
         k_flat = keys.reshape(-1, D)

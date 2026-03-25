@@ -33,7 +33,8 @@ def fwht(x: torch.Tensor, normalize: bool = True) -> torch.Tensor:
         Transformed tensor of the same shape.
     """
     d = x.shape[-1]
-    assert d > 0 and (d & (d - 1)) == 0, f"Last dim must be power of 2, got {d}"
+    if d <= 0 or (d & (d - 1)) != 0:
+        raise ValueError(f"Last dim must be power of 2, got {d}")
 
     result = x.clone()
     h = 1
