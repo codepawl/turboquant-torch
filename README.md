@@ -9,35 +9,29 @@ TurboQuant is a **two-stage online (data-oblivious) vector quantizer** that achi
 
 ## How It Works
 
-```
-                        TurboQuant Pipeline (b bits/coord)
-                        ==================================
+```mermaid
+flowchart TD
+    X["Input x"] --> Norm["Store ‖x‖"]
 
-Input x ──┬──────────────────────────────────────────────────────────┐
-           │                                                          │
-           ▼                                                          │
-   ┌─────────────────────────────────────────┐                        │
-   │  Stage 1: MSE-Optimal Quantizer (b-1 bits)                     │
-   │                                                                  │
-   │  x ──► Store ‖x‖ ──► Normalize ──► Random Hadamard ──► Lloyd-Max│
-   │         (norm)        (unit vec)    (sign flip + FWHT)  (scalar) │
-   │                                                                  │
-   │  Output: codes (b-1 bits/coord) + norm (32 bits)                │
-   └────────────────────┬────────────────────────────────────────────┘
-                        │ x̂ = dequantize(codes, norm)
-                        ▼
-              residual r = x - x̂
-                        │
-                        ▼
-   ┌─────────────────────────────────────────┐
-   │  Stage 2: QJL 1-bit on Residual                                │
-   │                                                                  │
-   │  r ──► Random Rademacher projection ──► sign() ──► 1 bit/coord │
-   │                                                                  │
-   │  Output: sign bits (1 bit/coord)                                │
-   └─────────────────────────────────────────┘
+    subgraph S1["Stage 1: MSE-Optimal Quantizer (b−1 bits)"]
+        Norm --> Normalize["Normalize to unit vector"]
+        Normalize --> RHT["Randomized Hadamard Transform\n(random sign flip + FWHT)"]
+        RHT --> LM["Lloyd-Max Scalar Quantizer"]
+        LM --> Codes["codes (b−1 bits/coord) + norm (32 bits)"]
+    end
 
-Total: b bits per coordinate (unbiased inner product estimator)
+    Codes --> Deq["x̂ = dequantize(codes, norm)"]
+    X --> Res
+    Deq --> Res["Residual r = x − x̂"]
+
+    subgraph S2["Stage 2: QJL 1-bit on Residual"]
+        Res --> Proj["Random Rademacher Projection"]
+        Proj --> Sign["sign()"]
+        Sign --> Bits["sign bits (1 bit/coord)"]
+    end
+
+    Codes --> Out["Total: b bits per coordinate\n(unbiased inner product estimator)"]
+    Bits --> Out
 ```
 
 ### Key Properties
