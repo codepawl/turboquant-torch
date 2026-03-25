@@ -85,12 +85,8 @@ def run_with_huggingface():
         print(f"    Key MSE:        {avg_key_mse:.6f}")
         print(f"    Value MSE:      {avg_val_mse:.6f}")
         print(f"    Attention MSE:  {avg_attn_mse:.8f}")
-        print(
-            f"    Memory/layer:   {orig_mb:.4f} MB -> {comp_mb:.4f} MB ({ratio:.1f}x)"
-        )
-        print(
-            f"    Total KV cache: {orig_mb * n_layers:.2f} MB -> {comp_mb * n_layers:.2f} MB"
-        )
+        print(f"    Memory/layer:   {orig_mb:.4f} MB -> {comp_mb:.4f} MB ({ratio:.1f}x)")
+        print(f"    Total KV cache: {orig_mb * n_layers:.2f} MB -> {comp_mb * n_layers:.2f} MB")
 
     # ── Per-layer detail (3-bit) ──────────────────────────────────────────
     print("\n" + "=" * 60)

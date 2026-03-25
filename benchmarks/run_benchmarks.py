@@ -72,9 +72,7 @@ def benchmark_config(name, n_layers, num_heads, seq_len, head_dim, keys_values=N
             # Attention score MSE (single random query)
             query = torch.randn(BATCH_SIZE, num_heads, 1, head_dim)
             scale = head_dim**-0.5
-            attn_orig = torch.softmax(
-                torch.matmul(query, keys.transpose(-2, -1)) * scale, dim=-1
-            )
+            attn_orig = torch.softmax(torch.matmul(query, keys.transpose(-2, -1)) * scale, dim=-1)
             attn_comp = torch.softmax(
                 torch.matmul(query, keys_hat.transpose(-2, -1)) * scale, dim=-1
             )
@@ -116,9 +114,7 @@ def run_real_model_benchmark():
     model_name = "HuggingFaceTB/SmolLM2-135M"
     print(f"  Loading {model_name}...")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, dtype=torch.float32, device_map="cpu"
-    )
+    model = AutoModelForCausalLM.from_pretrained(model_name, dtype=torch.float32, device_map="cpu")
     model.eval()
 
     prompt = "The future of artificial intelligence lies in efficient compression"
@@ -154,8 +150,7 @@ def format_results_table(all_results, model_info):
 
     if model_info:
         lines.append(
-            f"## Real Model: [{model_info['name']}]"
-            f"(https://huggingface.co/{model_info['name']})\n"
+            f"## Real Model: [{model_info['name']}](https://huggingface.co/{model_info['name']})\n"
         )
         lines.append(f"- Layers: {model_info['layers']}")
         lines.append(f"- KV Heads: {model_info['kv_heads']}")
@@ -212,9 +207,7 @@ def main():
         print(f"Running {name}...")
         # For very large configs (32K+), only benchmark 1 layer to avoid OOM
         effective_layers = 1 if seq_len > 16384 else min(layers, 4)
-        results = benchmark_config(
-            name, effective_layers, heads, seq_len, head_dim
-        )
+        results = benchmark_config(name, effective_layers, heads, seq_len, head_dim)
         # Scale timing to full model estimate
         for r in results:
             scale = layers / effective_layers

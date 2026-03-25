@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   pull_request:
-    branches: [main]
+    branches: [main, staging]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,9 +26,9 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
       - name: Ruff check
-        run: ruff check --output-format=github turboquant/ tests/ examples/
+        run: ruff check --output-format=github turboquant/ tests/ examples/ benchmarks/
       - name: Ruff format
-        run: ruff format --check turboquant/ tests/ examples/
+        run: ruff format --check turboquant/ tests/ examples/ benchmarks/
       - name: Mypy
         run: mypy turboquant/
 
