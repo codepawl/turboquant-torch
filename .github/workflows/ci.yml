@@ -19,9 +19,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: pip
+      - name: Install uv
+        run: pip install uv
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install --system -e ".[dev]"
       - name: Ruff check
         run: ruff check --output-format=github turboquant/ tests/ examples/
       - name: Ruff format
@@ -42,9 +43,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
+      - name: Install uv
+        run: pip install uv
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install --system -e ".[dev]"
       - name: Run tests with coverage
         run: pytest tests/ -v --cov=turboquant --cov-report=xml --cov-report=term-missing
       - name: Upload coverage
@@ -62,9 +64,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: pip
+      - name: Install uv
+        run: pip install uv
       - name: Install dependencies
-        run: pip install -e ".[dev]" pip-audit safety
+        run: uv pip install --system -e ".[dev]" pip-audit safety
       - name: Audit dependencies (pip-audit)
         run: pip-audit --skip-editable --ignore-vuln CVE-2026-4539
       - name: Check for known vulnerabilities (safety)
@@ -82,13 +85,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Install build
-        run: pip install build
+      - name: Install uv
+        run: pip install uv
       - name: Build sdist and wheel
-        run: python -m build
+        run: uv build
       - name: Check package
         run: |
-          pip install twine
+          uv pip install --system twine
           twine check dist/*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
