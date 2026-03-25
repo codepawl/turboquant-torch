@@ -32,9 +32,9 @@ class TestFWHT:
         assert y.shape == x.shape
 
     def test_non_power_of_2_raises(self):
-        """Non-power-of-2 dimension raises assertion error."""
+        """Non-power-of-2 dimension raises ValueError."""
         x = torch.randn(10)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             fwht(x)
 
 
