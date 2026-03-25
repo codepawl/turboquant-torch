@@ -88,7 +88,7 @@ jobs:
         run: python -m build
       - name: Check package
         run: |
-          pip install "twine<6"
+          pip install twine
           twine check dist/*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
