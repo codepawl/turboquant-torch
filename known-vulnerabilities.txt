@@ -1,3 +1,0 @@
-# CVE-2026-4539: low-severity local-only ReDoS in pygments AdlLexer (transitive dep via pytest/IPython)
-# No upstream patch available yet. Monitor: https://github.com/pygments/pygments/issues/3058
-CVE-2026-4539
