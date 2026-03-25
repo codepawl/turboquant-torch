@@ -1,7 +1,8 @@
 # turboquant-torch
 
-[![CI](https://github.com/nxank4/turboquant-torch/actions/workflows/ci.yml/badge.svg)](https://github.com/nxank4/turboquant-torch/actions/workflows/ci.yml)
+[![CI](https://github.com/codepawl/turboquant-torch/actions/workflows/ci.yml/badge.svg)](https://github.com/codepawl/turboquant-torch/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
+[![TestPyPI version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftest.pypi.org%2Fpypi%2Fturboquant-torch%2Fjson&query=%24.info.version&label=TestPyPI)](https://test.pypi.org/project/turboquant-torch/)
 [![Python](https://img.shields.io/pypi/pyversions/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -16,7 +17,7 @@ TurboQuant is a **two-stage online (data-oblivious) vector quantizer** that achi
 
 ## Overview
 
-![TurboQuant Two-Stage Pipeline](assets/card-c-pipeline.png)
+![TurboQuant Two-Stage Pipeline](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-c-pipeline.png)
 
 ## How It Works
 
@@ -55,18 +56,16 @@ flowchart TD
 ## Installation
 
 ```bash
-# From source
-git clone https://github.com/nxank4/turboquant-torch.git
+pip install turboquant-torch
+```
+
+### From source (development)
+
+```bash
+git clone https://github.com/codepawl/turboquant-torch.git
 cd turboquant-torch
 pip install -e ".[dev]"
 ```
-
-### Dependencies
-
-- `torch >= 2.0`
-- `numpy >= 1.24`
-- `scipy >= 1.10`
-- `pytest >= 7.0` (dev)
 
 ## Quick Start
 
@@ -128,11 +127,29 @@ From paper Table 1 (MSE distortion on unit vectors):
 
 3-bit achieves zero quality loss on LongBench, Needle-in-Haystack, ZeroSCROLLS, RULER, and L-Eval benchmarks.
 
-![MSE Distortion Validation](assets/card-a-distortion.png)
+![MSE Distortion Validation](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-a-distortion.png)
 
 ### KV Cache Memory Savings
 
-![KV Cache Memory Savings](assets/card-b-memory.png)
+![KV Cache Memory Savings](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-b-memory.png)
+
+## Benchmarks on Real Models
+
+Tested on [SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M) KV cache (30 layers, 3 KV heads, head_dim=64):
+
+| Bit-width | Key MSE | Attn Score MSE | Memory | Ratio |
+|-----------|---------|----------------|--------|-------|
+| 2-bit     | 1.8732  | 0.01798362     | 0.03 MB | 12.8x |
+| 3-bit     | 0.5902  | 0.00741907     | 0.04 MB | 9.1x  |
+| 4-bit     | 0.1740  | 0.00249073     | 0.06 MB | 7.1x  |
+
+Full benchmark results: [benchmarks/results.md](benchmarks/results.md)
+
+![Real Model Benchmark](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-d-benchmark.png)
+
+### KV Cache Memory at Scale
+
+![KV Cache Memory at Scale](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-e-scaling.png)
 
 ## Project Structure
 
@@ -155,7 +172,7 @@ turboquant/
 | Framework | JAX/XLA | PyTorch |
 | CUDA kernels | Custom fused kernels for H100 | Pure PyTorch (no custom CUDA) |
 | Entropy coding | Optional (Section 3.1) | Not implemented |
-| HuggingFace | N/A | Not integrated (standalone) |
+| HuggingFace | N/A | KV cache compression demo ([examples/](examples/huggingface_demo.py)) |
 | Codebook | Exact precomputed | Lloyd-Max iterative (equivalent) |
 
 Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable future contribution.
