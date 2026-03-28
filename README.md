@@ -89,7 +89,7 @@ print(f"Compression: {tq.compression_ratio():.1f}x")  # ~10.7x
 ```python
 from turboquant import TurboQuantKVCache
 
-cache = TurboQuantKVCache(head_dim=128, bit_width=3)
+cache = TurboQuantKVCache(head_dim=128, bit_width=3, residual_length=128)
 
 # Compress KV tensors (batch, heads, seq, dim)
 keys = torch.randn(2, 32, 2048, 128)
@@ -102,6 +102,33 @@ output = cache.attention(query, compressed)
 
 orig_mb, comp_mb, ratio = cache.memory_savings(2, 32, 2048)
 print(f"Memory: {orig_mb:.0f} MB -> {comp_mb:.0f} MB ({ratio:.1f}x)")
+```
+
+### Sliding Window (Residual Buffer)
+
+Keep recent tokens in fp16 for higher accuracy on local context:
+
+```python
+cache = TurboQuantKVCache(
+    head_dim=128,
+    bit_width=3,
+    residual_length=128,  # last 128 tokens stay in fp16
+)
+```
+
+### GQA/MQA Support
+
+For models with grouped query attention (Llama-3, Mistral, etc.):
+
+```python
+cache = TurboQuantKVCache.for_gqa(
+    head_dim=128,
+    num_kv_heads=8,       # Llama-3-8B
+    num_query_heads=32,
+    bit_width=3,
+    residual_length=128,
+)
+# Keys auto-bumped to 4-bit to compensate for GQA error amplification
 ```
 
 ### Vector Search
