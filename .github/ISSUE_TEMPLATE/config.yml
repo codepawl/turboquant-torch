@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discord
+    url: https://discord.gg/7fydHgK6kA
+    about: Chat with the community
+  - name: General Questions
+    url: https://github.com/codepawl/turboquant-torch/discussions
+    about: Ask questions here

@@ -3,10 +3,8 @@
 [![CI](https://github.com/codepawl/turboquant-torch/actions/workflows/ci.yml/badge.svg)](https://github.com/codepawl/turboquant-torch/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
 [![TestPyPI version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftest.pypi.org%2Fpypi%2Fturboquant-torch%2Fjson&query=%24.info.version&label=TestPyPI)](https://test.pypi.org/project/turboquant-torch/)
-[![Python](https://img.shields.io/pypi/pyversions/turboquant-torch)](https://pypi.org/project/turboquant-torch/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Unofficial PyTorch reference implementation of **TurboQuant** from Google Research (ICLR 2026).
 
@@ -178,6 +176,27 @@ Full benchmark results: [benchmarks/results.md](benchmarks/results.md)
 
 ![KV Cache Memory at Scale](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-e-scaling.png)
 
+### Downstream Task Evaluation
+
+Tested on Qwen3.5-4B (head_dim=256, 3-bit, RTX 3060, 200 samples/task):
+
+| Task | fp16 | 3-bit | Diff |
+|------|------|-------|------|
+| HellaSwag | 37.0% | 38.5% | +1.5% |
+| ARC-Easy | 49.0% | 49.5% | +0.5% |
+
+Differences are within sampling variance, confirming compression preserves task accuracy.
+
+![Downstream Task Evaluation](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-h-downstream.png)
+
+### Sliding Window Effect
+
+![Sliding Window](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-f-sliding-window.png)
+
+### GQA Error Amplification
+
+![GQA Error Amplification](https://raw.githubusercontent.com/codepawl/turboquant-torch/main/assets/card-g-gqa.png)
+
 ## Project Structure
 
 ```
@@ -210,6 +229,37 @@ Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable
 pip install -e ".[dev]"
 pytest tests/ -v
 ```
+
+## Contributing
+
+We welcome contributions! Here's how to get started:
+
+1. Fork the repo and create a feature branch from `staging`
+2. Install dev dependencies: `pip install -e ".[dev]"`
+3. Make changes and add tests
+4. Run checks:
+```bash
+   ruff check turboquant/ tests/
+   ruff format turboquant/ tests/
+   mypy turboquant/
+   pytest tests/ -v
+```
+5. Open a PR against `staging` (not `main`)
+
+See our [branching strategy](CLAUDE.md): feature branches → staging → main.
+
+### Areas where help is needed
+
+- **CUDA/Triton kernels** — fused Hadamard + quantize for 10x speedup
+- **vLLM integration** — PagedAttention compatibility
+- **More model benchmarks** — Llama-3, Mistral, Gemma on downstream tasks
+- **Entropy coding** — optional compression from paper Section 3.1
+
+## Community
+
+- GitHub Issues: [github.com/codepawl/turboquant-torch/issues](https://github.com/codepawl/turboquant-torch/issues)
+- Discord: [discord.gg/7fydHgK6kA](https://discord.gg/7fydHgK6kA)
+- X: [@codepawl](https://x.com/codepawl)
 
 ## Citation
 
