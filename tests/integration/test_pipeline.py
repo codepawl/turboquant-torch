@@ -8,6 +8,7 @@ from turboquant import TurboQuant, TurboQuantMSE
 class TestFullPipeline:
     def test_quantize_dequantize_inner_product(self):
         """Full pipeline: quantize → dequantize → inner product is close to original."""
+        torch.manual_seed(42)
         dim = 128
         tq = TurboQuant(dim=dim, bit_width=3, unbiased=True)
 
@@ -24,6 +25,7 @@ class TestFullPipeline:
 
     def test_mse_then_full_pipeline_consistency(self):
         """MSE-only and full pipeline give consistent MSE component."""
+        torch.manual_seed(42)
         dim = 128
         x = torch.randn(20, dim)
 
@@ -40,6 +42,7 @@ class TestFullPipeline:
 
     def test_different_bit_widths_ordering(self):
         """Higher bit width → lower distortion, consistently across pipeline."""
+        torch.manual_seed(42)
         dim = 128
         x = torch.randn(100, dim)
 
