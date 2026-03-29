@@ -56,17 +56,10 @@ class TurboQuantMSE:
         Returns:
             MSEQuantizedOutput with codes, norms, and bit_width.
         """
-        # Store L2 norm
         norms = torch.norm(x, dim=-1)
-
-        # Normalize to unit norm (handle zero vectors)
-        safe_norms = norms.clamp(min=1e-10)
+        safe_norms = norms.clamp(min=1e-10)  # handle zero vectors
         x_unit = x / safe_norms.unsqueeze(-1)
-
-        # Rotate
         x_rot = self.rht.forward(x_unit)
-
-        # Scalar quantize each coordinate
         codes = self.codebook.quantize(x_rot)
 
         return MSEQuantizedOutput(codes=codes, norms=norms, bit_width=self.bit_width)
@@ -80,13 +73,8 @@ class TurboQuantMSE:
         Returns:
             Reconstructed tensor of shape (..., dim).
         """
-        # Lookup centroids
         x_rot = self.codebook.dequantize(output.codes)
-
-        # Inverse rotation
         x_unit = self.rht.inverse(x_rot)
-
-        # Rescale by stored norm
         return x_unit * output.norms.unsqueeze(-1)
 
     def get_residual(self, x: torch.Tensor) -> torch.Tensor:

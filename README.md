@@ -102,6 +102,25 @@ orig_mb, comp_mb, ratio = cache.memory_savings(2, 32, 2048)
 print(f"Memory: {orig_mb:.0f} MB -> {comp_mb:.0f} MB ({ratio:.1f}x)")
 ```
 
+### Real Model Example
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from turboquant import TurboQuantKVCache
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B", dtype=torch.float32)
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+
+with torch.no_grad():
+    out = model(**tokenizer("The quick brown fox", return_tensors="pt"), use_cache=True)
+
+kv = out.past_key_values
+k, v = kv.layers[0].keys, kv.layers[0].values  # layer 0 KV cache
+cache = TurboQuantKVCache(head_dim=k.shape[-1], bit_width=3)
+compressed = cache.compress(k.float(), v.float())
+```
+
 ### Sliding Window (Residual Buffer)
 
 Keep recent tokens in fp16 for higher accuracy on local context:
@@ -227,7 +246,9 @@ Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v
+pytest tests/unit/ -v              # fast, isolated
+pytest tests/integration/ -v       # multi-module
+pytest tests/unit/ tests/integration/ -v  # all
 ```
 
 ## Contributing

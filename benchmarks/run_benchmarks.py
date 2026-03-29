@@ -54,18 +54,15 @@ def benchmark_config(name, n_layers, num_heads, seq_len, head_dim, keys_values=N
                 keys = torch.randn(BATCH_SIZE, num_heads, seq_len, head_dim)
                 values = torch.randn(BATCH_SIZE, num_heads, seq_len, head_dim)
 
-            # Compress
             t0 = time.perf_counter()
             compressed = cache.compress(keys, values)
             total_compress_ms += (time.perf_counter() - t0) * 1000
 
-            # Decompress
             t0 = time.perf_counter()
             keys_hat = cache.decompress_keys(compressed)
             values_hat = cache.decompress_values(compressed)
             total_decompress_ms += (time.perf_counter() - t0) * 1000
 
-            # MSE
             total_key_mse += ((keys - keys_hat) ** 2).mean().item()
             total_val_mse += ((values - values_hat) ** 2).mean().item()
 

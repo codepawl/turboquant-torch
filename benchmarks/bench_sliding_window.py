@@ -44,11 +44,9 @@ def _bench_layers(config_name, keys_values, head_dim, num_heads, seq_len, n_laye
             query = torch.randn(BATCH_SIZE, num_heads, 1, head_dim)
             scale = head_dim**-0.5
 
-            # Ground truth
             true_attn = F.softmax(query @ keys.transpose(-2, -1) * scale, dim=-1)
             true_out = true_attn @ values
 
-            # Compressed
             compressed = cache.compress(keys, values)
             keys_hat = cache.decompress_keys(compressed)
             values_hat = cache.decompress_values(compressed)

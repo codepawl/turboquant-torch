@@ -13,7 +13,6 @@ bit_width = 3
 
 print(f"Database: {n_db} vectors, dim={dim}, {bit_width}-bit quantization")
 
-# Generate random data
 torch.manual_seed(42)
 database = torch.randn(n_db, dim)
 queries = torch.randn(n_queries, dim)
@@ -23,11 +22,9 @@ index = TurboQuantIndex(dim=dim, bit_width=bit_width, metric="ip")
 index.add(database)
 print(f"Index built: {index.n_vectors} vectors, {index.memory_bytes() / 1024:.1f} KB")
 
-# Search
 scores, indices = index.search(queries, k=k)
 print(f"Search results shape: scores={scores.shape}, indices={indices.shape}")
 
-# Evaluate recall against brute-force
 true_scores = queries @ database.t()
 _, true_indices = torch.topk(true_scores, k, dim=-1)
 
@@ -40,7 +37,6 @@ for i in range(n_queries):
 recall = recall_sum / n_queries
 print(f"Recall@{k}: {recall:.3f}")
 
-# Compression stats
 original_bytes = n_db * dim * 4
 compressed_bytes = index.memory_bytes()
 print(

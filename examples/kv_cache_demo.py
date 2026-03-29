@@ -4,7 +4,6 @@ import torch
 
 from turboquant import TurboQuantKVCache
 
-# Typical transformer config
 batch_size = 2
 num_heads = 32
 seq_len = 2048
@@ -17,11 +16,9 @@ print()
 print("=== Standard (3-bit, residual_length=128) ===")
 cache = TurboQuantKVCache(head_dim=head_dim, bit_width=3, residual_length=128)
 
-# Simulate KV tensors
 keys = torch.randn(batch_size, num_heads, seq_len, head_dim)
 values = torch.randn(batch_size, num_heads, seq_len, head_dim)
 
-# Compress
 compressed = cache.compress(keys, values)
 print(
     f"Split point: {compressed.split_point} (quantized) + "
@@ -34,12 +31,10 @@ print(f"Original:   {orig_mb:.1f} MB")
 print(f"Compressed: {comp_mb:.1f} MB")
 print(f"Ratio:      {ratio:.1f}x")
 
-# Attention with compressed cache
 query = torch.randn(batch_size, num_heads, 1, head_dim)
 attn_output = cache.attention(query, compressed)
 print(f"Attention output shape: {attn_output.shape}")
 
-# Reconstruction quality
 keys_hat = cache.decompress_keys(compressed)
 values_hat = cache.decompress_values(compressed)
 key_mse = ((keys - keys_hat) ** 2).mean()
@@ -60,7 +55,6 @@ cache_gqa = TurboQuantKVCache.for_gqa(
 print(f"Key bits:   {cache_gqa.key_quantizer.bit_width} (auto-bumped for GQA ratio=4)")
 print(f"Value bits: {cache_gqa.value_quantizer.bit_width}")
 
-# KV tensors use num_kv_heads
 gqa_keys = torch.randn(batch_size, 8, seq_len, head_dim)
 gqa_values = torch.randn(batch_size, 8, seq_len, head_dim)
 gqa_compressed = cache_gqa.compress(gqa_keys, gqa_values)

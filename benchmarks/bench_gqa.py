@@ -79,7 +79,6 @@ def run_gqa_benchmark():
                 k_hat = cache.decompress_keys(compressed)
                 v_hat = cache.decompress_values(compressed)
 
-                # Expand decompressed KV
                 k_hat_exp = k_hat.repeat_interleave(gqa_ratio, dim=1)
                 v_hat_exp = v_hat.repeat_interleave(gqa_ratio, dim=1)
 

@@ -95,7 +95,6 @@ class RandomizedHadamardTransform(nn.Module):
             )
             x = torch.cat([x, padding], dim=-1)
 
-        # Sign flip then Hadamard
         x = x * self.signs
         return fwht(x, normalize=True)
 

@@ -163,7 +163,6 @@ class TurboQuantKVCache:
         if self.head_dim != D:
             raise ValueError(f"Expected head_dim {self.head_dim}, got {D}")
 
-        # Store positions for later RoPE application
         stored_positions = positions if self.pre_rope else None
 
         if self.residual_length >= S:
@@ -182,13 +181,11 @@ class TurboQuantKVCache:
 
         split_point = S - self.residual_length
 
-        # Older tokens → quantized
         old_keys = keys[:, :, :split_point, :]
         old_values = values[:, :, :split_point, :]
         k_compressed = self.key_quantizer.quantize(old_keys.reshape(-1, D))
         v_compressed = self.value_quantizer.quantize(old_values.reshape(-1, D))
 
-        # Recent tokens → kept in original precision
         if self.residual_length > 0:
             recent_keys = keys[:, :, split_point:, :]
             recent_values = values[:, :, split_point:, :]
@@ -276,7 +273,6 @@ class TurboQuantKVCache:
         keys = self.decompress_keys(compressed)
         values = self.decompress_values(compressed)
 
-        # Apply RoPE at attention time when using Pre-RoPE quantization
         if self.pre_rope and rope_freqs is not None:
             from .rope import apply_rope
 
@@ -284,7 +280,6 @@ class TurboQuantKVCache:
             if query_positions is not None:
                 query = apply_rope(query, rope_freqs, query_positions)
 
-        # Standard scaled dot-product attention
         attn_weights = torch.matmul(query, keys.transpose(-2, -1)) * scale
         attn_weights = F.softmax(attn_weights, dim=-1)
         return torch.matmul(attn_weights, values)

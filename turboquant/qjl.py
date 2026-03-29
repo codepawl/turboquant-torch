@@ -131,9 +131,7 @@ class QJL:
         """
         R = self._get_proj_matrix(x.device, x.dtype)
         norms = torch.norm(x, dim=-1)
-        # z = x @ R^T, shape (..., proj_dim)
         z = x @ R.t()
-        # Store sign as {0, 1}: 1 if z >= 0, 0 if z < 0
         sign_bits = (z >= 0).to(torch.uint8)
         return QJLOutput(sign_bits=sign_bits, norms=norms)
 
@@ -150,8 +148,7 @@ class QJL:
             Reconstructed tensor of shape (..., input_dim).
         """
         R = self._get_proj_matrix(output.sign_bits.device, torch.float32)
-        # Convert {0, 1} back to {-1, +1}
-        signs = output.sign_bits.float() * 2 - 1  # (..., proj_dim)
+        signs = output.sign_bits.float() * 2 - 1  # {0,1} -> {-1,+1}
         # Asymmetric scaling: ||x|| * sqrt(pi/2) / m * R^T @ signs
         scale = output.norms.unsqueeze(-1) * math.sqrt(math.pi / 2) / self.proj_dim
         return scale * (signs @ R)
@@ -171,11 +168,8 @@ class QJL:
             Estimated inner products of shape (..., n).
         """
         R = self._get_proj_matrix(query.device, query.dtype)
-        # Project query: shape (..., proj_dim)
         query_proj = query @ R.t()
-        # Convert sign bits to {-1, +1}
-        signs = output.sign_bits.float() * 2 - 1  # (n, proj_dim)
-        # Raw dot: (..., proj_dim) @ (proj_dim, n) -> (..., n)
+        signs = output.sign_bits.float() * 2 - 1  # {0,1} -> {-1,+1}
         raw = query_proj @ signs.t() / self.proj_dim
         # Scale by ||x_i|| * sqrt(pi/2) for each database vector
         return raw * output.norms.unsqueeze(0) * math.sqrt(math.pi / 2)

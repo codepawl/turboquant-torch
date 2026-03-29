@@ -78,7 +78,6 @@ def main():
         out_g = quant_gauss.quantize(x)
         x_hat_g = quant_gauss.dequantize(out_g)
         mse_gauss = ((x - x_hat_g) ** 2).mean().item()
-        # Restore
         quant_gauss.codebook._boundaries = orig_boundaries
         quant_gauss.codebook._centroids = orig_centroids
 
