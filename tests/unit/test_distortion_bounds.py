@@ -37,7 +37,7 @@ class TestDistortionBounds:
         x = torch.randn(n_vectors, dim)
         x = x / torch.norm(x, dim=-1, keepdim=True)
 
-        mse = TurboQuantMSE(dim=dim, bits=bits, seed=42)
+        mse = TurboQuantMSE(dim=dim, bit_width=bits, seed=42)
         distortion = mse.distortion(x).mean().item()
         paper_val = PAPER_DISTORTION[bits]
 
@@ -58,7 +58,7 @@ class TestDistortionBounds:
 
         distortions = []
         for bits in [1, 2, 3, 4]:
-            mse = TurboQuantMSE(dim=dim, bits=bits, seed=42)
+            mse = TurboQuantMSE(dim=dim, bit_width=bits, seed=42)
             d = mse.distortion(x).mean().item()
             distortions.append(d)
 

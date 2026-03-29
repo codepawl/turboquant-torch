@@ -51,8 +51,12 @@ jobs:
         run: pip install uv
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
-      - name: Run tests with coverage
-        run: pytest tests/ -v --cov=turboquant --cov-report=xml --cov-report=term-missing
+      - name: Unit tests
+        run: pytest tests/unit/ -v --tb=short
+      - name: Integration tests
+        run: pytest tests/integration/ -v --tb=short
+      - name: Coverage report
+        run: pytest tests/unit/ tests/integration/ --cov=turboquant --cov-report=xml --cov-report=term-missing -q
       - name: Upload coverage
         if: matrix.python-version == '3.14'
         uses: actions/upload-artifact@v7

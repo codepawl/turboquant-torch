@@ -40,7 +40,7 @@ jobs:
         run: pip install uv
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
-      - run: pytest tests/ -v
+      - run: pytest tests/unit/ tests/integration/ -v
 
   publish-testpypi:
     name: Publish to TestPyPI
