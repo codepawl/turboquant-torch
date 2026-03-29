@@ -15,10 +15,10 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - name: Install uv
@@ -41,21 +41,25 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
         run: pip install uv
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
-      - name: Run tests with coverage
-        run: pytest tests/ -v --cov=turboquant --cov-report=xml --cov-report=term-missing
+      - name: Unit tests
+        run: pytest tests/unit/ -v --tb=short
+      - name: Integration tests
+        run: pytest tests/integration/ -v --tb=short
+      - name: Coverage report
+        run: pytest tests/unit/ tests/integration/ --cov=turboquant --cov-report=xml --cov-report=term-missing -q
       - name: Upload coverage
         if: matrix.python-version == '3.14'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: coverage-report
           path: coverage.xml
@@ -64,10 +68,10 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - name: Install uv
@@ -87,10 +91,10 @@ jobs:
     needs: [test, security]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
       - name: Install uv
@@ -102,7 +106,7 @@ jobs:
           uv pip install --system twine
           twine check dist/*
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: dist
           path: dist/

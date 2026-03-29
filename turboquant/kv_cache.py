@@ -9,6 +9,8 @@ Supports:
   higher accuracy on local context.
 - GQA/MQA-aware configuration: auto-adjusts key bit allocation based
   on the GQA fan-out ratio to reduce amplified quantization error.
+- Pre-RoPE key quantization: quantize keys before RoPE is applied to
+  preserve quantization-friendly geometry.
 
 Reference: Section 4 of TurboQuant (arXiv:2504.19874)
 """
@@ -35,6 +37,7 @@ class CompressedKV(NamedTuple):
     seq_len: int
     head_dim: int
     split_point: int  # where quantized ends and residual begins
+    positions: torch.Tensor | None = None  # token positions for Pre-RoPE
 
 
 class TurboQuantKVCache:
@@ -49,6 +52,8 @@ class TurboQuantKVCache:
         residual_length: Number of recent tokens to keep in fp16 (sliding window).
         key_bit_width: Override bit width for keys. Defaults to ``bit_width``.
         value_bit_width: Override bit width for values. Defaults to ``bit_width``.
+        pre_rope: If True, keys are expected BEFORE RoPE application.
+            RoPE is applied at attention time to both query and dequantized keys.
         seed: Random seed.
     """
 
@@ -59,11 +64,13 @@ class TurboQuantKVCache:
         residual_length: int = 128,
         key_bit_width: int | None = None,
         value_bit_width: int | None = None,
+        pre_rope: bool = False,
         seed: int = 0,
     ):
         self.head_dim = head_dim
         self.bit_width = bit_width
         self.residual_length = residual_length
+        self.pre_rope = pre_rope
 
         k_bits = key_bit_width if key_bit_width is not None else bit_width
         v_bits = value_bit_width if value_bit_width is not None else bit_width
@@ -78,6 +85,7 @@ class TurboQuantKVCache:
         num_query_heads: int,
         bit_width: int = 3,
         residual_length: int = 128,
+        pre_rope: bool = False,
         seed: int = 0,
     ) -> TurboQuantKVCache:
         """Factory for GQA models. Auto-adjusts key bits based on fan-out ratio.
@@ -92,6 +100,7 @@ class TurboQuantKVCache:
             num_query_heads: Number of query heads (e.g., 32 for Llama-3-8B).
             bit_width: Base bit width.
             residual_length: Sliding window size.
+            pre_rope: If True, use Pre-RoPE key quantization.
             seed: Random seed.
 
         Returns:
@@ -99,7 +108,6 @@ class TurboQuantKVCache:
         """
         gqa_ratio = num_query_heads // num_kv_heads
 
-        # If GQA ratio > 2, bump key bits by 1 to reduce amplified error
         if gqa_ratio > 2:
             key_bits = min(bit_width + 1, 4)
             value_bits = bit_width
@@ -113,6 +121,7 @@ class TurboQuantKVCache:
             key_bit_width=key_bits,
             value_bit_width=value_bits,
             residual_length=residual_length,
+            pre_rope=pre_rope,
             seed=seed,
         )
 
@@ -122,15 +131,30 @@ class TurboQuantKVCache:
         self.value_quantizer = self.value_quantizer.to(device)
         return self
 
-    def compress(self, keys: torch.Tensor, values: torch.Tensor) -> CompressedKV:
+    def compress(
+        self,
+        keys: torch.Tensor,
+        values: torch.Tensor,
+        positions: torch.Tensor | None = None,
+        rope_freqs: torch.Tensor | None = None,
+    ) -> CompressedKV:
         """Compress key and value tensors.
 
         Tokens beyond the residual window are quantized; the most recent
         ``residual_length`` tokens are kept in their original precision.
 
+        When ``pre_rope=True``, *keys* should be the raw key projections
+        **before** RoPE has been applied. Pass *positions* and *rope_freqs*
+        so that RoPE can be applied at attention time.
+
         Args:
             keys: Key tensor of shape (batch, heads, seq, head_dim).
+                If pre_rope=True, these must be **before** RoPE.
             values: Value tensor of shape (batch, heads, seq, head_dim).
+            positions: Token position indices for Pre-RoPE mode.
+                Shape ``(seq,)`` or ``(batch, seq)``.
+            rope_freqs: Precomputed RoPE frequencies from
+                :func:`turboquant.rope.compute_rope_frequencies`.
 
         Returns:
             CompressedKV with quantized old tokens and fp16/fp32 residual.
@@ -139,8 +163,10 @@ class TurboQuantKVCache:
         if self.head_dim != D:
             raise ValueError(f"Expected head_dim {self.head_dim}, got {D}")
 
+        # Store positions for later RoPE application
+        stored_positions = positions if self.pre_rope else None
+
         if self.residual_length >= S:
-            # All tokens fit in the residual buffer — no quantization needed
             return CompressedKV(
                 keys=None,
                 values=None,
@@ -151,6 +177,7 @@ class TurboQuantKVCache:
                 seq_len=S,
                 head_dim=D,
                 split_point=0,
+                positions=stored_positions,
             )
 
         split_point = S - self.residual_length
@@ -179,6 +206,7 @@ class TurboQuantKVCache:
             seq_len=S,
             head_dim=D,
             split_point=split_point,
+            positions=stored_positions,
         )
 
     def decompress_keys(self, compressed: CompressedKV) -> torch.Tensor:
@@ -224,13 +252,20 @@ class TurboQuantKVCache:
         query: torch.Tensor,
         compressed: CompressedKV,
         scale: float | None = None,
+        query_positions: torch.Tensor | None = None,
+        rope_freqs: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Compute scaled dot-product attention with compressed KV cache.
+
+        When ``pre_rope=True`` and *rope_freqs* is provided, RoPE is applied
+        to the dequantized keys and to the query at attention time.
 
         Args:
             query: Query tensor of shape (batch, heads, q_len, head_dim).
             compressed: CompressedKV from compress().
             scale: Attention scale factor. Defaults to 1/sqrt(head_dim).
+            query_positions: Position indices for the query (Pre-RoPE mode).
+            rope_freqs: Precomputed RoPE frequencies (Pre-RoPE mode).
 
         Returns:
             Attention output of shape (batch, heads, q_len, head_dim).
@@ -241,11 +276,17 @@ class TurboQuantKVCache:
         keys = self.decompress_keys(compressed)
         values = self.decompress_values(compressed)
 
+        # Apply RoPE at attention time when using Pre-RoPE quantization
+        if self.pre_rope and rope_freqs is not None:
+            from .rope import apply_rope
+
+            keys = apply_rope(keys, rope_freqs, compressed.positions)
+            if query_positions is not None:
+                query = apply_rope(query, rope_freqs, query_positions)
+
         # Standard scaled dot-product attention
-        # (B, H, Q, D) @ (B, H, D, S) -> (B, H, Q, S)
         attn_weights = torch.matmul(query, keys.transpose(-2, -1)) * scale
         attn_weights = F.softmax(attn_weights, dim=-1)
-        # (B, H, Q, S) @ (B, H, S, D) -> (B, H, Q, D)
         return torch.matmul(attn_weights, values)
 
     def memory_savings(

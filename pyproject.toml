@@ -8,7 +8,17 @@ dynamic = ["version"]
 description = "Unofficial PyTorch reference implementation of TurboQuant (ICLR 2026)"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "torch>=2.0",
     "numpy>=1.24",
@@ -21,6 +31,11 @@ dev = [
     "pytest-cov",
     "ruff>=0.9",
     "mypy>=1.14",
+]
+demo = [
+    "transformers>=4.36",
+    "accelerate",
+    "rich>=13.0",
 ]
 
 [tool.setuptools_scm]
@@ -70,6 +85,9 @@ show_error_codes = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 [tool.coverage.run]
 source = ["turboquant"]

@@ -59,7 +59,7 @@ class TurboQuant:
         else:
             mse_bits = bit_width
 
-        self.mse = TurboQuantMSE(dim, bits=mse_bits, seed=seed)
+        self.mse = TurboQuantMSE(dim, bit_width=mse_bits, seed=seed)
         self.qjl: QJL | None = None
         if unbiased:
             self.qjl = QJL(dim, proj_dim=dim, seed=seed + 1)
@@ -67,6 +67,8 @@ class TurboQuant:
     def to(self, device: torch.device) -> "TurboQuant":
         """Move to device."""
         self.mse = self.mse.to(device)
+        if self.qjl is not None:
+            self.qjl = self.qjl.to(device)
         return self
 
     def quantize(self, x: torch.Tensor) -> TurboQuantOutput:

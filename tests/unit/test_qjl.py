@@ -102,6 +102,15 @@ class TestQJL:
         ip = qjl.estimate_inner_product(query, out)
         assert ip.shape == (5, 20)
 
+    def test_rademacher_projection(self):
+        """QJL with Rademacher projection produces valid output."""
+        qjl = QJL(input_dim=128, proj_dim=128, seed=42, proj_type="rademacher")
+        x = torch.randn(5, 128)
+        out = qjl.quantize(x)
+        assert out.sign_bits.shape == (5, 128)
+        assert out.sign_bits.dtype == torch.uint8
+        assert ((out.sign_bits == 0) | (out.sign_bits == 1)).all()
+
     def test_unbiasedness_with_gaussian_projection(self):
         """QJL with Gaussian projection should be approximately unbiased."""
         dim = 128
