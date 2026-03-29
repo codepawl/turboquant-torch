@@ -5,8 +5,9 @@ the standard normal distribution N(0,1). At runtime, these are scaled by
 1/sqrt(d) for the Gaussian approximation of Beta(d/2, d/2) coordinates
 after randomized Hadamard rotation.
 
-For low dimensions (d < 64), exact codebooks for Beta(d/2, d/2) are
-computed using scipy.
+For dimensions < 256 (covering most LLM head dims), exact codebooks for
+Beta(d/2, d/2) are used from precomputed data or computed on-the-fly.
+For dimensions >= 256, the Gaussian approximation is accurate enough.
 
 Reference: Section 3.1, Lemma 3.2 of TurboQuant (arXiv:2504.19874)
 """
@@ -27,18 +28,18 @@ class Codebook(NamedTuple):
     centroids: np.ndarray  # shape (2^b,)
 
 
-def _lloyd_max_normal(bits: int, max_iter: int = 200, tol: float = 1e-12) -> Codebook:
+def _lloyd_max_normal(bit_width: int, max_iter: int = 200, tol: float = 1e-12) -> Codebook:
     """Compute Lloyd-Max optimal quantizer for N(0,1).
 
     Args:
-        bits: Number of quantization bits (1-8).
+        bit_width: Number of quantization bits (1-8).
         max_iter: Maximum Lloyd-Max iterations.
         tol: Convergence tolerance.
 
     Returns:
         Codebook with boundaries and centroids.
     """
-    n_levels = 1 << bits
+    n_levels = 1 << bit_width
 
     # Initialize centroids uniformly in [-3, 3]
     centroids = np.linspace(-3, 3, n_levels)
@@ -72,13 +73,13 @@ def _lloyd_max_normal(bits: int, max_iter: int = 200, tol: float = 1e-12) -> Cod
     return Codebook(boundaries=boundaries, centroids=centroids)
 
 
-def _lloyd_max_beta(bits: int, dim: int, max_iter: int = 200, tol: float = 1e-12) -> Codebook:
+def _lloyd_max_beta(bit_width: int, dim: int, max_iter: int = 200, tol: float = 1e-12) -> Codebook:
     """Compute Lloyd-Max optimal quantizer for Beta(d/2, d/2) on [-1, 1].
 
     Used for low dimensions where Gaussian approximation is inaccurate.
 
     Args:
-        bits: Number of quantization bits.
+        bit_width: Number of quantization bits.
         dim: Vector dimension (determines Beta shape parameters).
         max_iter: Maximum Lloyd-Max iterations.
         tol: Convergence tolerance.
@@ -86,7 +87,7 @@ def _lloyd_max_beta(bits: int, dim: int, max_iter: int = 200, tol: float = 1e-12
     Returns:
         Codebook with boundaries and centroids.
     """
-    n_levels = 1 << bits
+    n_levels = 1 << bit_width
     a = dim / 2.0
 
     # Beta(a, a) on [0, 1], then shift to [-1, 1]: X = 2*B - 1
@@ -128,45 +129,68 @@ def _lloyd_max_beta(bits: int, dim: int, max_iter: int = 200, tol: float = 1e-12
     return Codebook(boundaries=boundaries, centroids=centroids)
 
 
-# Precompute N(0,1) codebooks for bit widths 1-4
+# Cache for N(0,1) codebooks (lazy-loaded on first access)
 _NORMAL_CODEBOOKS: dict[int, Codebook] = {}
-for _b in range(1, 5):
-    _NORMAL_CODEBOOKS[_b] = _lloyd_max_normal(_b)
 
 
-# Cache for Beta codebooks (keyed by (bits, dim))
+def _get_normal_codebook(bit_width: int) -> Codebook:
+    """Get or compute the N(0,1) Lloyd-Max codebook for a given bit width."""
+    if bit_width not in _NORMAL_CODEBOOKS:
+        _NORMAL_CODEBOOKS[bit_width] = _lloyd_max_normal(bit_width)
+    return _NORMAL_CODEBOOKS[bit_width]
+
+
+# Cache for Beta codebooks (keyed by (bit_width, dim))
 _BETA_CODEBOOK_CACHE: dict[tuple[int, int], Codebook] = {}
 
 
-def get_codebook(bits: int, dim: int) -> Codebook:
+# Threshold above which Gaussian approximation is used.
+# Below this, exact Beta codebooks give measurably lower MSE.
+_HIGH_DIM_THRESHOLD = 256
+
+
+def get_codebook(bit_width: int, dim: int) -> Codebook:
     """Get the Lloyd-Max codebook for a given bit width and dimension.
 
-    For dim >= 64, uses the Gaussian approximation (precomputed N(0,1)
-    codebook scaled by 1/sqrt(d)). For dim < 64, computes exact
-    codebook for Beta(d/2, d/2).
+    For dim >= 256, uses the Gaussian approximation (precomputed N(0,1)
+    codebook scaled by 1/sqrt(d)). For dim < 256, uses exact codebook
+    for Beta(d/2, d/2) — either from precomputed data or computed
+    on-the-fly.
 
     Args:
-        bits: Quantization bit width (1-4).
+        bit_width: Quantization bit width (1-4).
         dim: Vector dimension.
 
     Returns:
         Codebook with appropriately scaled boundaries and centroids.
     """
-    if bits < 1 or bits > 8:
-        raise ValueError(f"Bit width must be 1-8, got {bits}")
+    if bit_width < 1 or bit_width > 8:
+        raise ValueError(f"Bit width must be 1-8, got {bit_width}")
 
-    if dim >= 64:
-        if bits not in _NORMAL_CODEBOOKS:
-            _NORMAL_CODEBOOKS[bits] = _lloyd_max_normal(bits)
-        cb = _NORMAL_CODEBOOKS[bits]
+    if dim >= _HIGH_DIM_THRESHOLD:
+        cb = _get_normal_codebook(bit_width)
         scale = 1.0 / np.sqrt(dim)
         return Codebook(
             boundaries=cb.boundaries * scale,
             centroids=cb.centroids * scale,
         )
-    key = (bits, dim)
+
+    # Exact Beta codebook for dim < 256
+    key = (bit_width, dim)
+
+    # Check precomputed data first (no scipy needed)
+    from .codebook_data import PRECOMPUTED_BETA_CODEBOOKS
+
+    if key in PRECOMPUTED_BETA_CODEBOOKS:
+        data = PRECOMPUTED_BETA_CODEBOOKS[key]
+        return Codebook(
+            boundaries=np.array(data["boundaries"]),
+            centroids=np.array(data["centroids"]),
+        )
+
+    # Fall back to computing on-the-fly
     if key not in _BETA_CODEBOOK_CACHE:
-        _BETA_CODEBOOK_CACHE[key] = _lloyd_max_beta(bits, dim)
+        _BETA_CODEBOOK_CACHE[key] = _lloyd_max_beta(bit_width, dim)
     return _BETA_CODEBOOK_CACHE[key]
 
 
@@ -174,14 +198,14 @@ class LloydMaxCodebook:
     """Scalar quantizer using precomputed Lloyd-Max codebooks.
 
     Args:
-        bits: Number of quantization bits per coordinate.
         dim: Vector dimension (used to select Gaussian vs Beta codebook).
+        bit_width: Number of quantization bits per coordinate.
     """
 
-    def __init__(self, bits: int, dim: int):
-        self.bits = bits
+    def __init__(self, dim: int, bit_width: int):
+        self.bit_width = bit_width
         self.dim = dim
-        cb = get_codebook(bits, dim)
+        cb = get_codebook(bit_width, dim)
         self._boundaries = torch.from_numpy(cb.boundaries).float()
         self._centroids = torch.from_numpy(cb.centroids).float()
 
@@ -206,7 +230,7 @@ class LloydMaxCodebook:
             x: Input tensor of shape (..., d).
 
         Returns:
-            Integer codes of shape (..., d) in range [0, 2^bits).
+            Integer codes of shape (..., d) in range [0, 2^bit_width).
         """
         # searchsorted expects sorted boundaries; returns index i such that
         # boundaries[i-1] <= x < boundaries[i]

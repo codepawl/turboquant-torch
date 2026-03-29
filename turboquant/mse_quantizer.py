@@ -31,15 +31,15 @@ class TurboQuantMSE:
 
     Args:
         dim: Input vector dimension.
-        bits: Bits per coordinate for the scalar quantizer (1-4).
+        bit_width: Bits per coordinate for the scalar quantizer (1-4).
         seed: Random seed for the Hadamard rotation.
     """
 
-    def __init__(self, dim: int, bits: int = 2, seed: int = 0):
+    def __init__(self, dim: int, bit_width: int = 2, seed: int = 0):
         self.dim = dim
-        self.bits = bits
+        self.bit_width = bit_width
         self.rht = RandomizedHadamardTransform(dim, seed=seed)
-        self.codebook = LloydMaxCodebook(bits, self.rht.padded_dim)
+        self.codebook = LloydMaxCodebook(self.rht.padded_dim, bit_width)
 
     def to(self, device: torch.device) -> "TurboQuantMSE":
         """Move to device."""
@@ -69,7 +69,7 @@ class TurboQuantMSE:
         # Scalar quantize each coordinate
         codes = self.codebook.quantize(x_rot)
 
-        return MSEQuantizedOutput(codes=codes, norms=norms, bit_width=self.bits)
+        return MSEQuantizedOutput(codes=codes, norms=norms, bit_width=self.bit_width)
 
     def dequantize(self, output: MSEQuantizedOutput) -> torch.Tensor:
         """Reconstruct vectors from quantized codes.

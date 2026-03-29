@@ -89,7 +89,7 @@ class QJL:
         self,
         input_dim: int,
         proj_dim: int | None = None,
-        seed: int = 42,
+        seed: int = 0,
         proj_type: Literal["gaussian", "rademacher"] = "gaussian",
     ):
         self.input_dim = input_dim
@@ -97,6 +97,12 @@ class QJL:
         self.seed = seed
         self.proj_type = proj_type
         self._proj_matrix: torch.Tensor | None = None
+
+    def to(self, device: torch.device) -> "QJL":
+        """Move to device."""
+        if self._proj_matrix is not None:
+            self._proj_matrix = self._proj_matrix.to(device)
+        return self
 
     def _get_proj_matrix(self, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
         """Lazily generate the random projection matrix."""

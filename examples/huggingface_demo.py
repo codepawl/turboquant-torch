@@ -53,7 +53,8 @@ def run_with_huggingface():
     print("=" * 60)
 
     for bit_width in [2, 3, 4]:
-        cache = TurboQuantKVCache(head_dim=D, bit_width=bit_width)
+        # residual_length=0 so all tokens are quantized (seq is short)
+        cache = TurboQuantKVCache(head_dim=D, bit_width=bit_width, residual_length=0)
 
         total_key_mse = 0.0
         total_val_mse = 0.0
@@ -93,7 +94,7 @@ def run_with_huggingface():
     print("Per-layer Reconstruction MSE (3-bit)")
     print("=" * 60)
 
-    cache_3bit = TurboQuantKVCache(head_dim=D, bit_width=3)
+    cache_3bit = TurboQuantKVCache(head_dim=D, bit_width=3, residual_length=0)
     compressed_kv = []
     for keys, values in kv_pairs:
         compressed_kv.append(cache_3bit.compress(keys, values))
@@ -164,7 +165,7 @@ def run_with_mock():
     past_kv = [(torch.randn(B, H, S, D), torch.randn(B, H, S, D)) for _ in range(n_layers)]
 
     for bit_width in [2, 3, 4]:
-        cache = TurboQuantKVCache(head_dim=D, bit_width=bit_width)
+        cache = TurboQuantKVCache(head_dim=D, bit_width=bit_width, residual_length=0)
 
         total_key_mse = 0.0
         total_val_mse = 0.0
@@ -184,7 +185,7 @@ def run_with_mock():
         )
 
     # Attention with compressed cache (3-bit)
-    cache = TurboQuantKVCache(head_dim=D, bit_width=3)
+    cache = TurboQuantKVCache(head_dim=D, bit_width=3, residual_length=0)
     query = torch.randn(B, H, 1, D)
     for i, (k, v) in enumerate(past_kv):
         comp = cache.compress(k, v)
