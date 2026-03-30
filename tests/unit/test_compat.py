@@ -204,7 +204,6 @@ class TestDetectModelKVInfo:
 class TestCompressModelKV:
     def test_basic_roundtrip(self):
         """Compress/decompress tuple cache preserves shapes."""
-        pytest.importorskip("transformers")
         cache = _make_tuple_cache(n_layers=3, D=64)
         info = ModelKVInfo(
             n_layers=3,
@@ -263,7 +262,6 @@ class TestCompressModelKV:
 
     def test_gqa_uses_for_gqa(self):
         """GQA model creates GQA-aware compressor."""
-        pytest.importorskip("transformers")
         cache = _make_tuple_cache(n_layers=2, H=4, D=64)
         info = ModelKVInfo(
             n_layers=2,
@@ -287,7 +285,6 @@ class TestCompressModelKV:
 
     def test_custom_model_info(self):
         """Passing model_info skips auto-detection."""
-        pytest.importorskip("transformers")
         cache = _make_tuple_cache(n_layers=2, D=64)
         info = ModelKVInfo(
             n_layers=2,
