@@ -56,20 +56,27 @@ def _get_layers(model: Any) -> list[Any]:
 
     Tries known attribute paths across model families.
     """
+    candidates = []
     # Llama, Mistral, Qwen, Gemma, Phi-3
     if hasattr(model, "model") and hasattr(model.model, "layers"):
-        return list(model.model.layers)
+        candidates.append(model.model.layers)
     # GPT-2, GPT-Neo
-    if hasattr(model, "transformer") and hasattr(model.transformer, "h"):
-        return list(model.transformer.h)
+    elif hasattr(model, "transformer") and hasattr(model.transformer, "h"):
+        candidates.append(model.transformer.h)
     # GPT-NeoX, Pythia
-    if hasattr(model, "gpt_neox") and hasattr(model.gpt_neox, "layers"):
-        return list(model.gpt_neox.layers)
+    elif hasattr(model, "gpt_neox") and hasattr(model.gpt_neox, "layers"):
+        candidates.append(model.gpt_neox.layers)
     # OPT, encoder-decoder
-    if hasattr(model, "model") and hasattr(model.model, "decoder"):
+    elif hasattr(model, "model") and hasattr(model.model, "decoder"):
         decoder = model.model.decoder
         if hasattr(decoder, "layers"):
-            return list(decoder.layers)
+            candidates.append(decoder.layers)
+
+    for candidate in candidates:
+        try:
+            return list(candidate)
+        except TypeError:
+            continue
     return []
 
 

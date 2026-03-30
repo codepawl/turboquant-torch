@@ -81,14 +81,14 @@ class TurboQuantKVCache:
         self.bit_width = bit_width
         self.residual_length = residual_length
         self.pre_rope = pre_rope
-        self.n_outlier_channels = n_outlier_channels
+        self.n_outlier_channels = min(n_outlier_channels, head_dim // 4)
         self.outlier_method = outlier_method
 
         k_bits = key_bit_width if key_bit_width is not None else bit_width
         v_bits = value_bit_width if value_bit_width is not None else bit_width
 
-        if n_outlier_channels > 0:
-            bulk_dim = head_dim - n_outlier_channels
+        if self.n_outlier_channels > 0:
+            bulk_dim = head_dim - self.n_outlier_channels
             self.key_quantizer = TurboQuant(bulk_dim, k_bits, unbiased=True, seed=seed)
             self.value_quantizer = TurboQuant(bulk_dim, v_bits, unbiased=False, seed=seed + 100)
         else:
