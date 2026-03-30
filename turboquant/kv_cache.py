@@ -23,6 +23,7 @@ import torch
 import torch.nn.functional as F
 
 from .core import TurboQuant, TurboQuantOutput
+from .outlier import OutlierSplit, detect_outlier_channels, merge_outliers, split_outliers
 
 
 class CompressedKV(NamedTuple):
@@ -38,6 +39,8 @@ class CompressedKV(NamedTuple):
     head_dim: int
     split_point: int  # where quantized ends and residual begins
     positions: torch.Tensor | None = None  # token positions for Pre-RoPE
+    key_outlier_split: OutlierSplit | None = None  # outlier channels for keys
+    value_outlier_split: OutlierSplit | None = None  # outlier channels for values
 
 
 class TurboQuantKVCache:
@@ -54,6 +57,11 @@ class TurboQuantKVCache:
         value_bit_width: Override bit width for values. Defaults to ``bit_width``.
         pre_rope: If True, keys are expected BEFORE RoPE application.
             RoPE is applied at attention time to both query and dequantized keys.
+        n_outlier_channels: Number of outlier channels to route to high-precision
+            storage, bypassing quantization. 0 disables outlier routing. Typical
+            values are 8-32 for models with attention sinks.
+        outlier_method: Detection method for outlier channels. One of
+            "magnitude", "variance", or "range".
         seed: Random seed.
     """
 
@@ -65,18 +73,27 @@ class TurboQuantKVCache:
         key_bit_width: int | None = None,
         value_bit_width: int | None = None,
         pre_rope: bool = False,
+        n_outlier_channels: int = 0,
+        outlier_method: str = "magnitude",
         seed: int = 0,
     ):
         self.head_dim = head_dim
         self.bit_width = bit_width
         self.residual_length = residual_length
         self.pre_rope = pre_rope
+        self.n_outlier_channels = n_outlier_channels
+        self.outlier_method = outlier_method
 
         k_bits = key_bit_width if key_bit_width is not None else bit_width
         v_bits = value_bit_width if value_bit_width is not None else bit_width
 
-        self.key_quantizer = TurboQuant(head_dim, k_bits, unbiased=True, seed=seed)
-        self.value_quantizer = TurboQuant(head_dim, v_bits, unbiased=False, seed=seed + 100)
+        if n_outlier_channels > 0:
+            bulk_dim = head_dim - n_outlier_channels
+            self.key_quantizer = TurboQuant(bulk_dim, k_bits, unbiased=True, seed=seed)
+            self.value_quantizer = TurboQuant(bulk_dim, v_bits, unbiased=False, seed=seed + 100)
+        else:
+            self.key_quantizer = TurboQuant(head_dim, k_bits, unbiased=True, seed=seed)
+            self.value_quantizer = TurboQuant(head_dim, v_bits, unbiased=False, seed=seed + 100)
 
     @staticmethod
     def for_gqa(
@@ -86,6 +103,8 @@ class TurboQuantKVCache:
         bit_width: int = 3,
         residual_length: int = 128,
         pre_rope: bool = False,
+        n_outlier_channels: int = 0,
+        outlier_method: str = "magnitude",
         seed: int = 0,
     ) -> TurboQuantKVCache:
         """Factory for GQA models. Auto-adjusts key bits based on fan-out ratio.
@@ -122,6 +141,8 @@ class TurboQuantKVCache:
             value_bit_width=value_bits,
             residual_length=residual_length,
             pre_rope=pre_rope,
+            n_outlier_channels=n_outlier_channels,
+            outlier_method=outlier_method,
             seed=seed,
         )
 
@@ -183,8 +204,25 @@ class TurboQuantKVCache:
 
         old_keys = keys[:, :, :split_point, :]
         old_values = values[:, :, :split_point, :]
-        k_compressed = self.key_quantizer.quantize(old_keys.reshape(-1, D))
-        v_compressed = self.value_quantizer.quantize(old_values.reshape(-1, D))
+
+        key_outlier_split: OutlierSplit | None = None
+        value_outlier_split: OutlierSplit | None = None
+
+        if self.n_outlier_channels > 0:
+            outlier_idx = detect_outlier_channels(
+                old_keys, self.n_outlier_channels, self.outlier_method
+            )
+            key_outlier_split = split_outliers(old_keys, outlier_idx)
+            value_outlier_split = split_outliers(old_values, outlier_idx)
+
+            bulk_dim = key_outlier_split.bulk.shape[-1]
+            k_compressed = self.key_quantizer.quantize(key_outlier_split.bulk.reshape(-1, bulk_dim))
+            v_compressed = self.value_quantizer.quantize(
+                value_outlier_split.bulk.reshape(-1, bulk_dim)
+            )
+        else:
+            k_compressed = self.key_quantizer.quantize(old_keys.reshape(-1, D))
+            v_compressed = self.value_quantizer.quantize(old_values.reshape(-1, D))
 
         if self.residual_length > 0:
             recent_keys = keys[:, :, split_point:, :]
@@ -204,6 +242,8 @@ class TurboQuantKVCache:
             head_dim=D,
             split_point=split_point,
             positions=stored_positions,
+            key_outlier_split=key_outlier_split,
+            value_outlier_split=value_outlier_split,
         )
 
     def decompress_keys(self, compressed: CompressedKV) -> torch.Tensor:
@@ -219,7 +259,14 @@ class TurboQuantKVCache:
         sp = compressed.split_point
 
         if compressed.keys is not None:
-            old_keys = self.key_quantizer.dequantize(compressed.keys).view(B, H, sp, D)
+            bulk = self.key_quantizer.dequantize(compressed.keys)
+
+            if compressed.key_outlier_split is not None:
+                bulk = bulk.view(B, H, sp, -1)
+                old_keys = merge_outliers(bulk, compressed.key_outlier_split)
+            else:
+                old_keys = bulk.view(B, H, sp, D)
+
             if compressed.residual_keys.shape[2] > 0:
                 return torch.cat([old_keys, compressed.residual_keys], dim=2)
             return old_keys
@@ -238,7 +285,14 @@ class TurboQuantKVCache:
         sp = compressed.split_point
 
         if compressed.values is not None:
-            old_values = self.value_quantizer.dequantize(compressed.values).view(B, H, sp, D)
+            bulk = self.value_quantizer.dequantize(compressed.values)
+
+            if compressed.value_outlier_split is not None:
+                bulk = bulk.view(B, H, sp, -1)
+                old_values = merge_outliers(bulk, compressed.value_outlier_split)
+            else:
+                old_values = bulk.view(B, H, sp, D)
+
             if compressed.residual_values.shape[2] > 0:
                 return torch.cat([old_values, compressed.residual_values], dim=2)
             return old_values

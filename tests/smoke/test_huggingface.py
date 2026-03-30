@@ -33,22 +33,19 @@ class TestHuggingFace:
             out = model(**inputs, use_cache=True)
 
         past_kv = out.past_key_values
-        k = past_kv.key_cache[0] if hasattr(past_kv, "key_cache") else past_kv[0][0]
+
+        # Handle different cache formats across transformers versions
+        if hasattr(past_kv, "layers") and hasattr(past_kv.layers[0], "keys"):
+            k, v = past_kv.layers[0].keys, past_kv.layers[0].values
+        elif hasattr(past_kv, "key_cache"):
+            k, v = past_kv.key_cache[0], past_kv.value_cache[0]
+        else:
+            k, v = past_kv[0][0], past_kv[0][1]
 
         head_dim = k.shape[-1]
         cache = TurboQuantKVCache(head_dim=head_dim, bit_width=3, residual_length=0)
 
-        # Should not crash
-        if hasattr(past_kv, "key_cache"):
-            compressed = cache.compress(
-                past_kv.key_cache[0].float(),
-                past_kv.value_cache[0].float(),
-            )
-        else:
-            compressed = cache.compress(
-                past_kv[0][0].float(),
-                past_kv[0][1].float(),
-            )
+        compressed = cache.compress(k.float(), v.float())
 
         k_hat = cache.decompress_keys(compressed)
         assert k_hat.shape[-1] == head_dim

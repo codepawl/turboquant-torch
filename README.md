@@ -148,6 +148,45 @@ cache = TurboQuantKVCache.for_gqa(
 # Keys auto-bumped to 4-bit to compensate for GQA error amplification
 ```
 
+### Outlier Channel Routing
+
+Preserve high-magnitude channels in full precision (inspired by KVQuant/GEAR):
+
+```python
+cache = TurboQuantKVCache(
+    head_dim=128,
+    bit_width=3,
+    n_outlier_channels=8,   # top-8 channels kept in fp16
+    residual_length=128,
+)
+```
+
+### Adaptive Per-Layer Bit Allocation
+
+Different layers get different bit budgets:
+
+```python
+from turboquant import AdaptiveKVCache, gradient_allocation
+
+# Manual: 2-bit for early layers, 4-bit for late layers
+cache = AdaptiveKVCache(
+    head_dim=128,
+    layer_bits=[2]*10 + [3]*12 + [4]*10,  # 32 layers total
+)
+
+# Gradient allocation: smooth 2→4 bit ramp
+bits = gradient_allocation(n_layers=32, min_bits=2, max_bits=4, strategy="linear")
+cache = AdaptiveKVCache(head_dim=128, layer_bits=bits)
+
+# Auto-calibrated from model (requires HuggingFace model)
+cache = AdaptiveKVCache.from_model(
+    model, tokenizer,
+    head_dim=128,
+    target_avg_bits=3.0,
+)
+print(cache.summary())
+```
+
 ### Vector Search
 
 ```python
@@ -156,6 +195,99 @@ from turboquant import TurboQuantIndex
 index = TurboQuantIndex(dim=128, bit_width=3, metric="ip")
 index.add(database_vectors)  # Near-instant, no training!
 scores, indices = index.search(query, k=10)
+```
+
+## Real-World Usage
+
+### Compress a live model's KV cache
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from turboquant import TurboQuantKVCache
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B", dtype=torch.float32)
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+
+inputs = tokenizer("Explain quantum computing in simple terms:", return_tensors="pt").to(model.device)
+with torch.no_grad():
+    out = model(**inputs, use_cache=True)
+
+past_kv = out.past_key_values
+head_dim = past_kv.layers[0].keys.shape[-1]
+cache = TurboQuantKVCache(head_dim=head_dim, bit_width=3, residual_length=0)
+
+for i in range(len(past_kv.layers)):
+    k, v = past_kv.layers[i].keys.float(), past_kv.layers[i].values.float()
+    compressed = cache.compress(k, v)
+    k_hat = cache.decompress_keys(compressed)
+    print(f"Layer {i}: MSE={((k - k_hat)**2).mean():.6f}")
+```
+
+### Generate text with compressed KV cache
+
+```python
+from transformers import DynamicCache
+
+with torch.no_grad():
+    out = model(**inputs, use_cache=True)
+
+new_cache = DynamicCache()
+for i in range(len(out.past_key_values.layers)):
+    k = out.past_key_values.layers[i].keys.float()
+    v = out.past_key_values.layers[i].values.float()
+    compressed = cache.compress(k, v)
+    k_hat = cache.decompress_keys(compressed).to(k.dtype)
+    v_hat = cache.decompress_values(compressed).to(v.dtype)
+    new_cache.update(k_hat, v_hat, i)
+
+outputs = model.generate(
+    **inputs, past_key_values=new_cache,
+    max_new_tokens=50, do_sample=False,
+)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```
+
+### Multi-layer adaptive compression
+
+```python
+from turboquant import AdaptiveKVCache
+
+adaptive = AdaptiveKVCache.from_model(
+    model, tokenizer, head_dim=head_dim, target_avg_bits=3.0
+)
+print(adaptive.summary())
+
+for i in range(adaptive.n_layers):
+    k = past_kv.layers[i].keys.float()
+    v = past_kv.layers[i].values.float()
+    compressed = adaptive.compress_layer(i, k, v)
+```
+
+## Compatibility
+
+Works with any standard transformer KV cache:
+
+| Model Family | Status | Notes |
+|---|---|---|
+| Llama-3 / 3.1 / 3.2 | Full support | GQA-aware mode recommended |
+| Mistral / Mixtral | Full support | Sliding window auto-detected |
+| Gemma / Gemma 2 | Full support | |
+| Qwen2.5 / Qwen3 | Full support | |
+| Phi-3 / Phi-4 | Full support | |
+| Command-R | Full support | |
+| DeepSeek-V2/V3 | Skip MLA layers | KV already compressed by MLA |
+| Qwen3.5 / Jamba | Attention layers only | Non-attention layers skipped |
+| T5 / BART / mBART | Partial | Self-attention KV only |
+| Mamba / RWKV | Not applicable | No KV cache (SSM/RNN) |
+
+Use `compress_model_kv()` for automatic handling:
+
+```python
+from turboquant.compat import compress_model_kv
+
+compressed_cache = compress_model_kv(past_key_values, model, bit_width=3)
+outputs = model.generate(**inputs, past_key_values=compressed_cache, max_new_tokens=50)
 ```
 
 ## Distortion vs Bit Width
@@ -227,6 +359,9 @@ turboquant/
 ├── mse_quantizer.py     # MSE-optimal quantizer (rotation + Lloyd-Max)
 ├── core.py              # TurboQuant two-stage pipeline
 ├── kv_cache.py          # KV cache compression for transformers
+├── outlier.py           # Outlier channel detection and routing
+├── adaptive.py          # Adaptive per-layer bit allocation
+├── compat.py            # Model architecture compatibility detection
 └── vector_search.py     # Approximate nearest neighbor index
 ```
 
