@@ -7,7 +7,12 @@ Two-stage quantizer combining MSE-optimal scalar quantization with
 QJL 1-bit correction for unbiased inner product estimation.
 """
 
-from .adaptive import AdaptiveKVCache, gradient_allocation, uniform_allocation
+from .adaptive import (
+    AdaptiveKVCache,
+    calibration_allocation,
+    gradient_allocation,
+    uniform_allocation,
+)
 from .codebook import Codebook, LloydMaxCodebook, get_codebook
 from .compat import ModelKVInfo, compress_model_kv, detect_model_kv_info, extract_kv
 from .core import TurboQuant, TurboQuantOutput
@@ -32,6 +37,7 @@ __all__ = [
     "AdaptiveKVCache",
     "uniform_allocation",
     "gradient_allocation",
+    "calibration_allocation",
     "ModelKVInfo",
     "detect_model_kv_info",
     "compress_model_kv",
