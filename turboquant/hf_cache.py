@@ -254,7 +254,7 @@ if _HAS_HF_CACHE:
             """
             if layer_idx >= len(self.layers):
                 return 0
-            return self.layers[layer_idx].get_seq_length()
+            return int(self.layers[layer_idx].get_seq_length())
 
         def get_max_cache_shape(self, layer_idx: int = 0) -> int | None:  # type: ignore[override]
             """Return the maximum cache shape. Always None (unbounded).
