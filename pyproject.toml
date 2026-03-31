@@ -33,6 +33,10 @@ dev = [
     "ruff>=0.9",
     "mypy>=1.14",
 ]
+hf = [
+    "transformers>=4.36",
+    "accelerate",
+]
 demo = [
     "transformers>=4.36",
     "accelerate",
