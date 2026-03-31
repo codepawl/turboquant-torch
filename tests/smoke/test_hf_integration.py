@@ -32,9 +32,7 @@ class TestHFIntegration:
         model = AutoModelForCausalLM.from_pretrained(
             self.MODEL, trust_remote_code=True, torch_dtype=torch.float32
         )
-        tokenizer = AutoTokenizer.from_pretrained(
-            self.MODEL, trust_remote_code=True
-        )
+        tokenizer = AutoTokenizer.from_pretrained(self.MODEL, trust_remote_code=True)
         model.eval()
         return model, tokenizer
 
