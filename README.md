@@ -408,7 +408,7 @@ turboquant/
 | Framework | JAX/XLA | PyTorch |
 | CUDA kernels | Custom fused kernels for H100 | Pure PyTorch (no custom CUDA) |
 | Entropy coding | Optional (Section 3.1) | Not implemented |
-| HuggingFace | N/A | KV cache compression demo ([examples/](examples/huggingface_demo.py)) |
+| HuggingFace | N/A | KV cache compression ([examples/](examples/01_quickstart.py)) |
 | Codebook | Exact precomputed | Lloyd-Max iterative (equivalent) |
 
 Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable future contribution.

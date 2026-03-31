@@ -50,7 +50,7 @@ benchmarks/*_results.json
 assets/demo-output.txt
 assets/demo-timing.log
 assets/demo.gif
-examples/demo-screenshot.png
+examples/demo/demo-screenshot.png
 
 # HuggingFace model cache
 models--*/

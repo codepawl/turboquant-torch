@@ -9,7 +9,7 @@ Requirements:
     # or: pip install turboquant-torch transformers rich
 
 Usage:
-    python examples/demo_live.py
+    python examples/demo/demo_live.py
 """
 
 from __future__ import annotations
