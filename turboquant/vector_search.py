@@ -82,10 +82,7 @@ class TurboQuantIndex:
             norms = torch.norm(query, dim=-1, keepdim=True).clamp(min=1e-10)
             query = query / norms
 
-        # Compute inner products with all database vectors
         scores = self.quantizer.compute_inner_product(query, self._db)
-
-        # Top-k
         k = min(k, self._n_vectors)
         top_scores, top_indices = torch.topk(scores, k, dim=-1)
 

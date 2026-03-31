@@ -7,16 +7,24 @@ Two-stage quantizer combining MSE-optimal scalar quantization with
 QJL 1-bit correction for unbiased inner product estimation.
 """
 
+from .adaptive import (
+    AdaptiveKVCache,
+    calibration_allocation,
+    gradient_allocation,
+    uniform_allocation,
+)
 from .codebook import Codebook, LloydMaxCodebook, get_codebook
+from .compat import ModelKVInfo, compress_model_kv, detect_model_kv_info, extract_kv
 from .core import TurboQuant, TurboQuantOutput
 from .hadamard import RandomizedHadamardTransform, fwht
 from .kv_cache import CompressedKV, TurboQuantKVCache
 from .mse_quantizer import MSEQuantizedOutput, TurboQuantMSE
+from .outlier import OutlierSplit, detect_outlier_channels, merge_outliers, split_outliers
 from .qjl import QJL, QJLOutput, pack_bits, unpack_bits
 from .rope import apply_rope, compute_rope_frequencies
 from .vector_search import TurboQuantIndex
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 __all__ = [
     "TurboQuant",
@@ -26,6 +34,18 @@ __all__ = [
     "CompressedKV",
     "TurboQuantKVCache",
     "TurboQuantIndex",
+    "AdaptiveKVCache",
+    "uniform_allocation",
+    "gradient_allocation",
+    "calibration_allocation",
+    "ModelKVInfo",
+    "detect_model_kv_info",
+    "compress_model_kv",
+    "extract_kv",
+    "OutlierSplit",
+    "detect_outlier_channels",
+    "split_outliers",
+    "merge_outliers",
     "RandomizedHadamardTransform",
     "fwht",
     "Codebook",

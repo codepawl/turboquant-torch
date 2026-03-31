@@ -48,6 +48,9 @@ turboquant/
 ├── codebook.py          # Lloyd-Max codebook computation (Gaussian + Beta)
 ├── codebook_data.py     # Precomputed Beta codebooks (generated, do not edit)
 ├── kv_cache.py          # KV cache compression (sliding window, GQA, Pre-RoPE)
+├── outlier.py           # Outlier channel detection and routing
+├── adaptive.py          # Adaptive per-layer bit allocation
+├── compat.py            # Model architecture compatibility detection
 ├── rope.py              # RoPE utilities for Pre-RoPE key quantization
 └── vector_search.py     # Approximate nearest neighbor search
 

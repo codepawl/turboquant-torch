@@ -141,10 +141,8 @@ class TurboQuant:
         )
         x_hat = self.mse.dequantize(mse_out)
 
-        # MSE component: query @ x_hat^T
         ip = x_hat @ query if query.dim() == 1 else query @ x_hat.t()
 
-        # QJL correction
         if self.qjl is not None and output.qjl_output is not None:
             qjl_ip = self.qjl.estimate_inner_product(query, output.qjl_output)
             ip = ip + qjl_ip.squeeze(0) if query.dim() == 1 else ip + qjl_ip
