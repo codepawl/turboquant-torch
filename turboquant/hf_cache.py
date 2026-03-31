@@ -76,12 +76,12 @@ class TurboQuantDynamicCache:
             self._values[layer_idx] = value_states
         else:
             self._keys[layer_idx] = torch.cat(
-                [self._keys[layer_idx], key_states],
-                dim=-2,  # type: ignore[list-item]
+                [self._keys[layer_idx], key_states],  # type: ignore[list-item]
+                dim=-2,
             )
             self._values[layer_idx] = torch.cat(
-                [self._values[layer_idx], value_states],
-                dim=-2,  # type: ignore[list-item]
+                [self._values[layer_idx], value_states],  # type: ignore[list-item]
+                dim=-2,
             )
 
         return self._keys[layer_idx], self._values[layer_idx]  # type: ignore[return-value]
@@ -141,18 +141,34 @@ class TurboQuantDynamicCache:
         total_original_mb = 0.0
         total_compressed_mb = 0.0
 
-        for i, (k, v) in enumerate(zip(self._keys, self._values, strict=True)):
-            if k is None or i in self._skip_layers:
+        for i in range(len(self._keys)):
+            if i in self._skip_layers or self._keys[i] is None or self._values[i] is None:
                 layers_skipped += 1
                 continue
 
+            k: torch.Tensor = self._keys[i]  # type: ignore[assignment]
+            v: torch.Tensor = self._values[i]  # type: ignore[assignment]
+
             head_dim = k.shape[-1]
-            compressor = TurboQuantKVCache(
-                head_dim=head_dim,
-                bit_width=self.bit_width,
-                residual_length=self.residual_length,
-                n_outlier_channels=self.n_outlier_channels,
-            )
+            if (
+                self.model_info is not None
+                and self.model_info.num_kv_heads != self.model_info.num_query_heads
+            ):
+                compressor = TurboQuantKVCache.for_gqa(
+                    head_dim=head_dim,
+                    num_kv_heads=self.model_info.num_kv_heads,
+                    num_query_heads=self.model_info.num_query_heads,
+                    bit_width=self.bit_width,
+                    residual_length=self.residual_length,
+                    n_outlier_channels=self.n_outlier_channels,
+                )
+            else:
+                compressor = TurboQuantKVCache(
+                    head_dim=head_dim,
+                    bit_width=self.bit_width,
+                    residual_length=self.residual_length,
+                    n_outlier_channels=self.n_outlier_channels,
+                )
 
             B, H, S, _D = k.shape
             orig_mb, comp_mb, _ratio = compressor.memory_savings(B, H, S)

@@ -35,7 +35,7 @@ class TurboQuantWrapper:
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: Any,
         bit_width: int | None = None,
         residual_length: int = 0,
         n_outlier_channels: int = 0,
@@ -112,7 +112,7 @@ class TurboQuantWrapper:
     @property
     def device(self) -> torch.device:
         """Device of the wrapped model."""
-        return next(self._model.parameters()).device
+        return torch.device(next(self._model.parameters()).device)
 
     def to(self, *args: Any, **kwargs: Any) -> TurboQuantWrapper:
         """Move wrapped model to device/dtype.
@@ -141,7 +141,7 @@ class TurboQuantWrapper:
 
 
 def wrap(
-    model: torch.nn.Module,
+    model: Any,
     bit_width: int | None = None,
     residual_length: int = 0,
     n_outlier_channels: int = 0,
