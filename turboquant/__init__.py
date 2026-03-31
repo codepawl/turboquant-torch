@@ -26,7 +26,7 @@ from .rope import apply_rope, compute_rope_frequencies
 from .vector_search import TurboQuantIndex
 from .wrap import TurboQuantWrapper, wrap
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "TurboQuant",
