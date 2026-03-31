@@ -17,14 +17,16 @@ from .codebook import Codebook, LloydMaxCodebook, get_codebook
 from .compat import ModelKVInfo, compress_model_kv, detect_model_kv_info, extract_kv
 from .core import TurboQuant, TurboQuantOutput
 from .hadamard import RandomizedHadamardTransform, fwht
+from .hf_cache import TurboQuantDynamicCache
 from .kv_cache import CompressedKV, TurboQuantKVCache
 from .mse_quantizer import MSEQuantizedOutput, TurboQuantMSE
 from .outlier import OutlierSplit, detect_outlier_channels, merge_outliers, split_outliers
 from .qjl import QJL, QJLOutput, pack_bits, unpack_bits
 from .rope import apply_rope, compute_rope_frequencies
 from .vector_search import TurboQuantIndex
+from .wrap import TurboQuantWrapper, wrap
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "TurboQuant",
@@ -57,4 +59,7 @@ __all__ = [
     "unpack_bits",
     "compute_rope_frequencies",
     "apply_rope",
+    "TurboQuantDynamicCache",
+    "TurboQuantWrapper",
+    "wrap",
 ]

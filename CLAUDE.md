@@ -55,7 +55,8 @@ turboquant/
 └── vector_search.py     # Approximate nearest neighbor search
 
 tests/                   # pytest tests (mirrors turboquant/ modules)
-examples/                # Usage demos (basic, kv_cache, huggingface, vector_search)
+examples/                # Practical example scripts (quickstart, long context, adaptive)
+├── demo/                # Interactive rich demo (demo_live.py)
 benchmarks/              # Benchmark scripts + result data + card generation
 scripts/
 ├── version.sh           # Version bumping tool

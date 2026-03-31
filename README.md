@@ -65,7 +65,43 @@ cd turboquant-torch
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## 3 Lines to Compress Any LLM
+
+```python
+import turboquant
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+
+model = turboquant.wrap(model)  # <-- one line
+output = model.generate(**tokenizer("Hello", return_tensors="pt"), max_new_tokens=50)
+```
+
+KV cache automatically compressed to 3-bit. ~10x less memory.
+
+For more control:
+
+```python
+model = turboquant.wrap(
+    model,
+    bit_width=3,              # 2, 3, or 4
+    residual_length=128,      # sliding window
+    n_outlier_channels=8,     # outlier routing
+    verbose=True,             # print stats
+)
+```
+
+Or use the cache directly:
+
+```python
+from turboquant import TurboQuantDynamicCache
+
+cache = TurboQuantDynamicCache.from_model(model)
+output = model.generate(**inputs, past_key_values=cache, max_new_tokens=50)
+```
+
+## Low-Level API
 
 ### Basic Quantize / Dequantize
 
@@ -372,10 +408,20 @@ turboquant/
 | Framework | JAX/XLA | PyTorch |
 | CUDA kernels | Custom fused kernels for H100 | Pure PyTorch (no custom CUDA) |
 | Entropy coding | Optional (Section 3.1) | Not implemented |
-| HuggingFace | N/A | KV cache compression demo ([examples/](examples/huggingface_demo.py)) |
+| HuggingFace | N/A | KV cache compression ([examples/](examples/01_quickstart.ipynb)) |
 | Codebook | Exact precomputed | Lloyd-Max iterative (equivalent) |
 
 Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable future contribution.
+
+## Examples
+
+| Notebook | What it shows |
+|----------|---------------|
+| [01_quickstart.ipynb](examples/01_quickstart.ipynb) | 3-line compression, before/after comparison |
+| [02_long_context.ipynb](examples/02_long_context.ipynb) | Memory scaling, sliding window, outlier routing |
+| [03_adaptive_compression.ipynb](examples/03_adaptive_compression.ipynb) | Per-layer sensitivity, adaptive bit allocation |
+
+Each notebook has an "Open in Colab" badge and runs on CPU (free tier).
 
 ## Running Tests
 
@@ -433,6 +479,13 @@ See our [branching strategy](CLAUDE.md): feature branches → staging → main.
 
 - [QJL: 1-Bit Quantized JL Transform](https://arxiv.org/abs/2406.03482) — the 1-bit quantizer used in Stage 2. The official QJL implementation by the paper authors is available at [github.com/amirzandieh/QJL](https://github.com/amirzandieh/QJL).
 - [PolarQuant](https://arxiv.org/abs/2502.02617) — related polar coordinate quantization approach
+
+## Documentation
+
+- [Quick Start](docs/quickstart.md)
+- [API Reference](docs/api-reference.md)
+- [Model Compatibility](docs/compatibility.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 
