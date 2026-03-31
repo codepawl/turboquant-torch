@@ -470,6 +470,13 @@ See our [branching strategy](CLAUDE.md): feature branches → staging → main.
 - [QJL: 1-Bit Quantized JL Transform](https://arxiv.org/abs/2406.03482) — the 1-bit quantizer used in Stage 2. The official QJL implementation by the paper authors is available at [github.com/amirzandieh/QJL](https://github.com/amirzandieh/QJL).
 - [PolarQuant](https://arxiv.org/abs/2502.02617) — related polar coordinate quantization approach
 
+## Documentation
+
+- [Quick Start](docs/quickstart.md)
+- [API Reference](docs/api-reference.md)
+- [Model Compatibility](docs/compatibility.md)
+- [Changelog](CHANGELOG.md)
+
 ## License
 
 MIT
