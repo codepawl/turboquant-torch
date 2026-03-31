@@ -1,0 +1,27 @@
+{
+  "quantize_128_3bit": {
+    "vectors_per_sec": 19884.259373317254,
+    "avg_ms": 50.29103580000083
+  },
+  "quantize_256_3bit": {
+    "vectors_per_sec": 4915.502787270729,
+    "avg_ms": 203.4379885999897
+  },
+  "kv_compress_128_3bit": {
+    "compress_ms": 107.60624520000874,
+    "tokens_per_sec": 38064.70518868794
+  },
+  "kv_compress_128_3bit_outlier": {
+    "compress_ms": 106.25151979998009,
+    "tokens_per_sec": 38550.036815574735
+  },
+  "distortion_128_2bit": {
+    "mse": 0.5682371258735657
+  },
+  "distortion_128_3bit": {
+    "mse": 0.1819969266653061
+  },
+  "distortion_128_4bit": {
+    "mse": 0.05293169617652893
+  }
+}
