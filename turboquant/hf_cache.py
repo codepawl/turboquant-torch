@@ -7,7 +7,8 @@ all layers on demand via ``compress_all()``.
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import torch
 
@@ -75,10 +76,12 @@ class TurboQuantDynamicCache:
             self._values[layer_idx] = value_states
         else:
             self._keys[layer_idx] = torch.cat(
-                [self._keys[layer_idx], key_states], dim=-2  # type: ignore[list-item]
+                [self._keys[layer_idx], key_states],
+                dim=-2,  # type: ignore[list-item]
             )
             self._values[layer_idx] = torch.cat(
-                [self._values[layer_idx], value_states], dim=-2  # type: ignore[list-item]
+                [self._values[layer_idx], value_states],
+                dim=-2,  # type: ignore[list-item]
             )
 
         return self._keys[layer_idx], self._values[layer_idx]  # type: ignore[return-value]
@@ -111,10 +114,7 @@ class TurboQuantDynamicCache:
         Returns:
             List of key tensors per layer.
         """
-        return [
-            k if k is not None else torch.empty(0)
-            for k in self._keys
-        ]
+        return [k if k is not None else torch.empty(0) for k in self._keys]
 
     @property
     def value_cache(self) -> list[torch.Tensor]:
@@ -123,10 +123,7 @@ class TurboQuantDynamicCache:
         Returns:
             List of value tensors per layer.
         """
-        return [
-            v if v is not None else torch.empty(0)
-            for v in self._values
-        ]
+        return [v if v is not None else torch.empty(0) for v in self._values]
 
     def compress_all(self) -> dict[str, Any]:
         """Compress all layers using TurboQuantKVCache.
@@ -144,7 +141,7 @@ class TurboQuantDynamicCache:
         total_original_mb = 0.0
         total_compressed_mb = 0.0
 
-        for i, (k, v) in enumerate(zip(self._keys, self._values)):
+        for i, (k, v) in enumerate(zip(self._keys, self._values, strict=True)):
             if k is None or i in self._skip_layers:
                 layers_skipped += 1
                 continue
@@ -180,8 +177,7 @@ class TurboQuantDynamicCache:
         return len(self._keys)
 
     def __iter__(self) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-        for k, v in zip(self.key_cache, self.value_cache):
-            yield k, v
+        yield from zip(self.key_cache, self.value_cache, strict=True)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         return self.key_cache[idx], self.value_cache[idx]
@@ -192,9 +188,7 @@ class TurboQuantDynamicCache:
         Returns:
             Tuple of (key, value) pairs per layer.
         """
-        return tuple(
-            (k, v) for k, v in zip(self.key_cache, self.value_cache)
-        )
+        return tuple(zip(self.key_cache, self.value_cache, strict=True))
 
     def crop(self, max_length: int) -> None:
         """Crop all layers to at most ``max_length`` tokens.

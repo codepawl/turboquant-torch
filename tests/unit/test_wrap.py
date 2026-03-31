@@ -1,14 +1,10 @@
 """Tests for TurboQuantWrapper and wrap() API."""
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 import torch
 from torch import nn
 
 from turboquant.hf_cache import TurboQuantDynamicCache
 from turboquant.wrap import TurboQuantWrapper, wrap
-
 
 # -- Mock helpers ----------------------------------------------------------
 
@@ -120,7 +116,7 @@ class TestTurboQuantWrapper:
         """Calling the eval method returns self for chaining."""
         model = MockModel()
         wrapped = wrap(model)
-        result = getattr(wrapped, "eval")()
+        result = wrapped.eval()  # noqa: B009
         assert result is wrapped
 
     def test_wrap_verbose_flag(self):

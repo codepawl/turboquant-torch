@@ -102,6 +102,14 @@ class TestAPIStability:
         assert hasattr(cache, "for_gqa")
         assert hasattr(cache, "to")
 
+    def test_wrap_api(self):
+        """v0.4.0 wrap API exists."""
+        import turboquant
+
+        assert hasattr(turboquant, "wrap")
+        assert hasattr(turboquant, "TurboQuantWrapper")
+        assert hasattr(turboquant, "TurboQuantDynamicCache")
+
     def test_kv_cache_new_params(self):
         """v0.3.0 params exist."""
         cache = TurboQuantKVCache(
