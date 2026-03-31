@@ -413,6 +413,20 @@ turboquant/
 
 Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable future contribution.
 
+## Examples
+
+| Example | What it shows |
+|---------|---------------|
+| [01_quickstart.py](examples/01_quickstart.py) | 3-line compression, before/after comparison |
+| [02_long_context.py](examples/02_long_context.py) | Memory scaling, sliding window, outlier routing |
+| [03_adaptive_compression.py](examples/03_adaptive_compression.py) | Per-layer sensitivity, adaptive bit allocation |
+
+Run any example:
+```bash
+pip install "turboquant-torch[hf]"
+python examples/01_quickstart.py
+```
+
 ## Running Tests
 
 ```bash
