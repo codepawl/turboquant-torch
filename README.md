@@ -408,24 +408,20 @@ turboquant/
 | Framework | JAX/XLA | PyTorch |
 | CUDA kernels | Custom fused kernels for H100 | Pure PyTorch (no custom CUDA) |
 | Entropy coding | Optional (Section 3.1) | Not implemented |
-| HuggingFace | N/A | KV cache compression ([examples/](examples/01_quickstart.py)) |
+| HuggingFace | N/A | KV cache compression ([examples/](examples/01_quickstart.ipynb)) |
 | Codebook | Exact precomputed | Lloyd-Max iterative (equivalent) |
 
 Custom CUDA kernels for fused Hadamard + quantize operations would be a valuable future contribution.
 
 ## Examples
 
-| Example | What it shows |
-|---------|---------------|
-| [01_quickstart.py](examples/01_quickstart.py) | 3-line compression, before/after comparison |
-| [02_long_context.py](examples/02_long_context.py) | Memory scaling, sliding window, outlier routing |
-| [03_adaptive_compression.py](examples/03_adaptive_compression.py) | Per-layer sensitivity, adaptive bit allocation |
+| Notebook | What it shows |
+|----------|---------------|
+| [01_quickstart.ipynb](examples/01_quickstart.ipynb) | 3-line compression, before/after comparison |
+| [02_long_context.ipynb](examples/02_long_context.ipynb) | Memory scaling, sliding window, outlier routing |
+| [03_adaptive_compression.ipynb](examples/03_adaptive_compression.ipynb) | Per-layer sensitivity, adaptive bit allocation |
 
-Run any example:
-```bash
-pip install "turboquant-torch[hf]"
-python examples/01_quickstart.py
-```
+Each notebook has an "Open in Colab" badge and runs on CPU (free tier).
 
 ## Running Tests
 
