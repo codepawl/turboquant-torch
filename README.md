@@ -65,7 +65,43 @@ cd turboquant-torch
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## 3 Lines to Compress Any LLM
+
+```python
+import turboquant
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+
+model = turboquant.wrap(model)  # <-- one line
+output = model.generate(**tokenizer("Hello", return_tensors="pt"), max_new_tokens=50)
+```
+
+KV cache automatically compressed to 3-bit. ~10x less memory.
+
+For more control:
+
+```python
+model = turboquant.wrap(
+    model,
+    bit_width=3,              # 2, 3, or 4
+    residual_length=128,      # sliding window
+    n_outlier_channels=8,     # outlier routing
+    verbose=True,             # print stats
+)
+```
+
+Or use the cache directly:
+
+```python
+from turboquant import TurboQuantDynamicCache
+
+cache = TurboQuantDynamicCache.from_model(model)
+output = model.generate(**inputs, past_key_values=cache, max_new_tokens=50)
+```
+
+## Low-Level API
 
 ### Basic Quantize / Dequantize
 
